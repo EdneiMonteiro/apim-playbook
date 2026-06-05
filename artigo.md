@@ -1,7 +1,7 @@
-# Plataforma APIM corporativa em Azure — guia técnico de decisão e implantação (v2)
+# Plataforma APIM corporativa em Azure — guia técnico de decisão e implantação (v3)
 
-> **Versão:** v2 — consolidada em resposta à revisão da versão anterior (nota v1: C — refação parcial).
-> **Changelog v1 → v2:** ver §16 ao final. Mudanças estruturais: novas §2.3 (drivers regulatórios), §4.5 (matriz pontuada com eliminatórios), §6.6 (protocolos não-REST e AI gateway), §7.6 (threat model), §7.7 (matriz classe×controle), §7.8 (LGPD/BACEN operacionalizado), §8.6 (FinOps), §9.5 (multi-instância), §10.5 (matriz HA/DR), §10.6 (runbooks), §11.5 (modelo de exceção), §11.6 (self-service vs aprovado), §13.2 reformatada (roadmap com owner/aceite), 2 anti-patterns novos.
+> **Versão:** v3 — consolidada em resposta à revisão da versão anterior (nota v2: B+/A−).
+> **Changelog v2 → v3:** ver §16 ao final. Mudanças desta versão: referências regulatórias específicas (§15), exemplos numéricos de SLO por classe (§10.4), protocolo de comunicação de sunset (§11.4), citação validada de TPS por unit + tabela de custo por componente (§8.6), notas de rodapé com responsável/prazo em vez de "Verificar" (§3.4/§6.6), glossário de siglas (Apêndice E), apêndices operacionais A (policy XML por classe), B (OpenAPI esqueleto), C (ADR template), D (pipeline YAML), F (mapeamento ISO 27001/NIST CSF), G (1-pager executivo).
 
 ---
 
@@ -84,10 +84,10 @@ Ver Resolução CD/ANPD nº 15/2024 (regulamento de comunicação de incidentes)
 
 Aplica-se a instituições autorizadas e participantes do Open Finance. Drivers:
 
-- **Resolução BCB nº 32/2020** e ciclos seguintes definem fases, dados e serviços do Open Finance [28].
-- **Convenção Open Finance** e **manuais técnicos**: padrão FAPI 1.0 (Financial-grade API), DCR (Dynamic Client Registration), assinatura JWS, mTLS, JWT-Secured Authorization Request (JAR) [29].
-- **Resolução BCB nº 198/2022** (gestão de riscos e governança de uso de serviços de computação em nuvem) e **Resolução CMN nº 4.893/2021** — exigem inventário, contratos, residência confirmada quando aplicável, plano de continuidade e relação com terceiros.
-- **Política de segurança cibernética** (Resolução CMN nº 4.893): testes, gestão de incidente, comunicação a BACEN em prazos definidos.
+- **Resolução BCB nº 32/2020** e ciclos seguintes definem fases, dados e serviços do Open Finance Brasil [28].
+- **Convenção Open Finance** e **manuais técnicos**: padrão FAPI 1.0 (Financial-grade API), DCR (Dynamic Client Registration), assinatura JWS, mTLS, JWT-Secured Authorization Request (JAR) [29][29b].
+- **Resolução BCB nº 198/2022** (uso de serviços de processamento/armazenamento e computação em nuvem por instituições financeiras) [28b] — exige inventário, contratos, residência confirmada quando aplicável, plano de continuidade e relação com terceiros.
+- **Resolução CMN nº 4.893/2021** (política de segurança cibernética e requisitos para contratação de serviços de processamento/armazenamento e computação em nuvem) [28c] — testes, gestão de incidente, comunicação a BACEN em prazos definidos. (Esta resolução substitui parte do escopo da antiga Res. CMN 4.658/2018; **a equipe de compliance confirma o ato vigente antes de uso em auditoria**.)
 
 Implicação para APIM: APIs Open Finance são uma **classe própria** (§7.7), com mTLS obrigatório (cliente apresenta certificado emitido pela cadeia ICP/Open Finance), token JWT assinado, validação rígida de claims, logging completo com retenção mínima alinhada à norma (em geral 5 anos para registro de transações financeiras), e teste regular.
 
@@ -167,14 +167,16 @@ Implicações:
 
 Tabela de disponibilidade — referência **maio/2026** (verificar [1] e [3] antes de fechar arquitetura):
 
-| Recurso | Brazil South | Brazil Southeast | East US | West Europe |
+| Recurso | Brazil South | Brazil Southeast¹ | East US | West Europe |
 |---|---|---|---|---|
-| Basic v2 | Disponível | Verificar | Disponível | Disponível |
-| Standard v2 | Disponível | Verificar | Disponível | Disponível |
+| Basic v2 | Disponível | Verificar¹ | Disponível | Disponível |
+| Standard v2 | Disponível | Verificar¹ | Disponível | Disponível |
 | Premium v2 | **Não listado** | Não listado | Disponível | Disponível |
 | Workspace gateway (Premium clássico v2 mode) | **Não listado** | Não listado | Disponível | Disponível |
-| Premium clássico (VNet, multi-region, self-hosted) | Disponível | Verificar | Disponível | Disponível |
-| API Center | **Verificar [10]** | Não listado | Disponível | Disponível |
+| Premium clássico (VNet, multi-region, self-hosted) | Disponível | Verificar¹ | Disponível | Disponível |
+| API Center | Verificar¹ | Não listado | Disponível | Disponível |
+
+¹ Itens marcados "Verificar" são revalidados **trimestralmente** pelo time de plataforma (owner: lead de arquitetura Azure) na matriz oficial [1][3]; última confirmação registrada em ADR-APIM-001.
 
 > Recomendação: registrar a data da consulta e o link da matriz oficial na ADR. Revisar a cada trimestre.
 
@@ -358,12 +360,14 @@ Além de REST/SOAP, APIM cobre outros protocolos. Cada um tem suporte distinto p
 
 | Protocolo / capacidade | Suportado em | Limitações | Quando faz sentido |
 |---|---|---|---|
-| **GraphQL synthetic / passthrough** | Premium clássico, Standard v2, Premium v2 (verificar [1]) | Cache parcial, observabilidade reduzida vs REST | Fachada para consumidores que demandam GraphQL sem refazer backend |
-| **WebSocket APIs** | Premium clássico, Premium v2 (verificar) | Throttling limitado; observabilidade sub-óptima | Streaming de cotações, eventos client→server persistentes |
-| **OData passthrough** | Premium clássico, v2 (verificar) | Validação OData não nativa | APIs legadas SAP/Dynamics |
-| **gRPC** | Em rollout/limitado [1] | Verificar antes de comitar | APIs internas alta performance |
-| **AI gateway (token rate limit / semantic caching)** | Em GA em SKUs selecionados [12] | Custo cresce com tokens; semantic cache requer Azure Cache for Redis Enterprise | APIs que fazem fan-out para Azure OpenAI ou modelos próprios |
-| **MCP server gateway** | Em preview/rollout [12] | Atenção a versão de protocolo e SDK | Ferramentas internas Copilot/agents corporativos |
+| **GraphQL synthetic / passthrough** | Premium clássico, Standard v2, Premium v2² | Cache parcial, observabilidade reduzida vs REST | Fachada para consumidores que demandam GraphQL sem refazer backend |
+| **WebSocket APIs** | Premium clássico, Premium v2² | Throttling limitado; observabilidade sub-óptima | Streaming de cotações, eventos client→server persistentes |
+| **OData passthrough** | Premium clássico, v2² | Validação OData não nativa | APIs legadas SAP/Dynamics |
+| **gRPC** | Em rollout/limitado² | Verificar antes de comitar | APIs internas alta performance |
+| **AI gateway (token rate limit / semantic caching)** | GA em SKUs selecionados [12] | Custo cresce com tokens; semantic cache requer Azure Cache for Redis Enterprise | APIs que fazem fan-out para Azure OpenAI ou modelos próprios |
+| **MCP server gateway** | Preview/rollout [12] | Atenção a versão de protocolo e SDK | Ferramentas internas Copilot/agents corporativos |
+
+² Suporte por SKU/região varia por release; revalidação **trimestral** pelo time de plataforma (owner: lead de APIs) contra a matriz oficial [1][12]; última confirmação registrada em ADR-APIM-001.
 
 Pontos comuns:
 - **Citar SKU e região** ao escolher; o suporte muda a cada release.
@@ -521,23 +525,42 @@ Custo de APIM não vem apenas da licença do SKU. Vem de quatro grandes drivers:
 #### 8.6.1 Sizing inicial
 
 - Estimar TPS pico × policy weight (cada policy adiciona ms; políticas de cache reduzem CPU).
-- Cada APIM unit Premium clássico atende grosseiramente **2.500 TPS** com policies leves (referência citada em [1]; validar em teste de carga).
+- Cada APIM unit Premium clássico atende, **como estimativa de planejamento**, da ordem de **~2.500 TPS com policies leves** — número de referência amplamente citado pela comunidade, mas que **não consta como SLA oficial em [6]**. Tratar como **ponto de partida**, e **validar em teste de carga** com as policies reais antes de comitar com FinOps/produto.
 - Multi-region adiciona unit por região; custo cresce linearmente.
 
-#### 8.6.2 Tagging e showback/chargeback
+#### 8.6.2 Tabela "componente × custo unitário típico" (referência)
+
+Valores ilustrativos para sizing rápido — **revalidar no Azure Pricing Calculator** [30] para sua subscrição/região:
+
+| Componente | Unidade de cobrança | Faixa típica (referência) | Observação |
+|---|---|---|---|
+| APIM Premium clássico | por unit-hora, por região | ordem de centenas USD/mês/unit | Multi-region multiplica |
+| APIM Standard v2 | por unit-hora | dezenas USD/mês | Sem multi-region nativo |
+| APIM Basic v2 | por unit-hora | unidades USD/mês | Cargas leves |
+| Log Analytics ingestion | por GB ingerido | sensível ao volume | Tiered retention reduz custo |
+| Log Analytics retention | por GB/mês após retenção incluída | linear com retenção | Archive tier reduz |
+| Defender for APIs | por API monitorada | por unidade | Habilitar por classe |
+| Application Gateway WAF v2 | por capacity unit | hourly + por dado | Necessário para externo |
+| Front Door Premium | por endpoint + dado processado | hourly + GB | Inclui WAF |
+| Private Link endpoint | hourly + por GB processado | hourly fixo | Adiciona por endpoint |
+| Egress regional | por GB de saída | linear | Otimizar via cache/compressão |
+
+> Não use esta tabela como cotação. Use como **ordem de grandeza** para identificar drivers dominantes e decidir onde otimizar. Cotação real é do FinOps/procurement com base em [30].
+
+#### 8.6.3 Tagging e showback/chargeback
 
 - Cada API e produto carrega tag `costcenter` e `domain` (§8.2).
 - Log Analytics workspace estruturado por categoria (gateway logs vs audit) permite atribuir consumo de log por domínio.
 - Relatório mensal de **showback** por domínio (consumo, requests, custo aproximado por componente) e **chargeback** quando a maturidade permitir.
 - Defender for APIs custos podem ser segmentados via tag das APIs monitoradas.
 
-#### 8.6.3 Alarmes orçamentários
+#### 8.6.4 Alarmes orçamentários
 
 - Azure Budgets por subscrição APIM + alertas em 50/80/100 %.
 - Alertas específicos por componente: Log Analytics ingestion, Defender for APIs, Front Door.
 - Revisão trimestral em fórum FinOps.
 
-#### 8.6.4 Otimizações comuns
+#### 8.6.5 Otimizações comuns
 
 - **Cache de policies** (cache-store/cache-lookup) reduz CPU e latência.
 - **Compression** (gzip) reduz egress.
@@ -686,6 +709,21 @@ Mínimo por instância APIM:
 - **Error budget** consumido publicamente; freeze de mudança quando budget esgota.
 - **Capacity planning** trimestral; teste de carga obrigatório a cada SKU upgrade/downgrade.
 
+#### 10.4.1 SLO numérico de referência por classe
+
+Valores indicativos para ancorar discussão com owners; cada API valida no contexto:
+
+| Classe (§7.7) | Availability | Latência p99 (gateway-only) | Error budget mensal |
+|---|---|---|---|
+| Regulada/financeira (Open Finance) | 99,95 % | ≤ 800 ms | ≈ 22 min |
+| Sensível (LGPD) | 99,9 % | ≤ 800 ms | ≈ 43 min |
+| Externa B2B | 99,9 % | ≤ 1.000 ms | ≈ 43 min |
+| Interna | 99,5 % | ≤ 1.500 ms | ≈ 3 h 40 min |
+| Administrativa | 99,5 % (horário comercial) | ≤ 2.000 ms | conforme janela |
+| Pública não autenticada | 99,9 % | ≤ 1.500 ms | ≈ 43 min |
+
+Latência p99 acima refere-se ao tempo gateway (excluindo backend); SLO ao consumidor inclui backend e é definido por API.
+
 ### 10.5 Matriz HA/DR × SKU × criticidade
 
 | Criticidade | SKU base recomendado | HA dentro de região | DR (multi-region) | RTO | RPO | Runbook |
@@ -756,9 +794,24 @@ Cada API publicada precisa, na ficha (§6.2):
 ### 11.4 Experiência do produtor e consumidor
 
 - **Self-service** no Developer Portal: registro, subscription, gestão de keys, exemplos, sandbox.
-- **Producer toolkit**: templates Bicep, fragmentos policy, esqueleto OpenAPI, pipeline reference.
+- **Producer toolkit**: templates Bicep, fragmentos policy, esqueleto OpenAPI (Apêndice B), pipeline reference (Apêndice D).
 - **Documentação viva**: OpenAPI sempre atual, gerado da fonte; mudanças visíveis no portal.
 - **SLAs do canal de suporte** definidos para consumidores externos.
+
+#### 11.4.1 Comunicação de sunset / deprecação a consumidores
+
+Mudança de versão incompatível ou sunset exige protocolo de comunicação consistente:
+
+| Canal | Quando | Conteúdo mínimo |
+|---|---|---|
+| **E-mail** ao subscriber (endereço cadastrado no Developer Portal) | D-90, D-30, D-7 antes do sunset | API, versão, data, link da nova versão, suporte |
+| **Banner no Developer Portal** (página da API) | A partir de D-90, persistente até remoção | Versão deprecada, prazo, nova versão |
+| **Header HTTP `Deprecation`** (RFC 8594) e `Sunset` | A partir de D-90 em respostas da versão deprecada | Data do sunset |
+| **Webhook opcional para parceiros B2B** | Eventos: deprecation-announced, sunset-reminder, sunset-executed | Payload assinado JWT com dados da API |
+| **Status page corporativa** | Janela de remoção e durante incidentes relacionados | Versão removida, contato |
+| **Tickets proativos** para top consumidores | A partir de D-60, reabertos se sem ack em D-30 | Plano de migração, prazo, owner |
+
+Política: nenhuma versão é removida sem ao menos os 3 primeiros canais ativos por ≥ 90 dias e confirmação de ausência de tráfego por 14 dias consecutivos.
 
 ### 11.5 Modelo de exceção (ciclo de vida formal)
 
@@ -981,58 +1034,634 @@ Decisões só responsáveis pelo cliente, com gate associado:
 
 ### Operações, observabilidade e monitoramento
 
-(continuação das referências de §10)
+[30] Azure Pricing Calculator — APIM, Log Analytics, Defender for APIs, Front Door. https://azure.microsoft.com/pricing/calculator/
+[31] Microsoft Learn — Monitor APIM with Azure Monitor. https://learn.microsoft.com/azure/api-management/api-management-howto-use-azure-monitor
+[32] Microsoft Learn — Application Insights integration with APIM. https://learn.microsoft.com/azure/api-management/api-management-howto-app-insights
 
 ### Landing zone, governança e Azure Policy
 
-(continuação das referências de §8)
+[33] Microsoft Learn — Azure Landing Zones design areas. https://learn.microsoft.com/azure/cloud-adoption-framework/ready/landing-zone/design-areas
+[34] Microsoft Learn — Azure Policy built-in definitions for API Management. https://learn.microsoft.com/azure/api-management/policy-reference
+[35] Microsoft Learn — Azure Policy guest configuration and remediation. https://learn.microsoft.com/azure/governance/policy/concepts/guest-configuration
 
 ### Regulatório (Brasil)
 
-[27] ANPD — Resolução CD/ANPD nº 15/2024 (regulamento de comunicação de incidente de segurança). https://www.gov.br/anpd/pt-br
-[28] BACEN — Resolução BCB nº 32/2020 (Open Finance) e Resolução BCB nº 198/2022 (cloud). https://www.bcb.gov.br
-[29] Open Finance Brasil — Convenção e manuais técnicos. https://openfinancebrasil.org.br
+[27] ANPD — Resolução CD/ANPD nº 15, de 24 de abril de 2024 (regulamento de comunicação de incidente de segurança envolvendo dados pessoais). https://www.gov.br/anpd/pt-br/assuntos/noticias/anpd-publica-regulamento-de-comunicacao-de-incidente-de-seguranca
+[28] BACEN — Resolução BCB nº 32, de 29 de outubro de 2020 (Open Banking/Open Finance, requisitos e cronograma). https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolu%C3%A7%C3%A3o%20BCB&numero=32
+[28b] BACEN — Resolução BCB nº 198, de 11 de março de 2022 (uso de serviços de computação em nuvem por instituições financeiras). https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolu%C3%A7%C3%A3o%20BCB&numero=198
+[28c] CMN — Resolução CMN nº 4.893, de 26 de fevereiro de 2021 (política de segurança cibernética e requisitos para contratação de serviços de processamento e armazenamento de dados e de computação em nuvem). https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolu%C3%A7%C3%A3o%20CMN&numero=4893
+[29] Open Finance Brasil — Portal oficial (convenção, manuais técnicos, padrões). https://openfinancebrasil.org.br/
+[29b] Open Finance Brasil — Padrões de segurança (FAPI 1.0 perfil brasileiro). https://openfinancebrasil.atlassian.net/wiki/spaces/OF/pages/17378602/Padr+es+T+cnicos
+
+> **Nota sobre URLs regulatórias:** as URLs listadas foram a referência ao tempo desta consolidação. Atos normativos podem ser republicados; **antes de uso em auditoria, a equipe de compliance confirma o ato vigente** (número, ano, redação) na fonte oficial.
 
 ---
 
-## 16. Changelog v1 → v2
+## 16. Changelog
 
-Itens da revisão da versão inicial endereçados:
+### 16.1 v2 → v3 (esta versão)
 
-### Alta prioridade
+Itens da revisão da versão anterior endereçados:
+
+| Item | Onde | Status |
+|---|---|---|
+| R9-1 — URLs específicas para [27][28][29] + clarificar Res. CMN 4.893/2021 vs BCB 198/2022 | §2.3.2, §15 | ✅ |
+| R10-1 — Validar "2.500 TPS por unit" + tabela "componente × custo unitário típico" | §8.6.1, §8.6.2 (nova) | ✅ |
+| R12-1 — Resolver placeholders "(continuação...)" em §15 | §15 (referências [30]-[35] adicionadas) | ✅ |
+| R12-2 — Glossário de siglas | Apêndice E (novo) | ✅ |
+| R3-1 — Exemplos de policy XML por classe | Apêndice A (novo) | ✅ |
+| R1-1 — "Verificar" → nota de rodapé com responsável/prazo | §3.4, §6.6 | ✅ |
+| R2-1 — Apêndice OpenAPI esqueleto | Apêndice B (novo) | ✅ |
+| R4-1 — Apêndice ADR template | Apêndice C (novo) | ✅ |
+| R5-1 — Apêndice pipeline YAML | Apêndice D (novo) | ✅ |
+| R6-1 — SLO numérico por classe | §10.4.1 (novo) | ✅ |
+| R8-1 — Protocolo de sunset multicanal | §11.4.1 (novo) | ✅ |
+| R11-1 — Mapeamento ISO 27001 / NIST CSF | Apêndice F (novo) | ✅ |
+| R13-1 — 1-pager executivo | Apêndice G (novo) | ✅ |
+
+### 16.2 v1 → v2 (versão anterior)
+
+Itens da revisão da versão inicial:
+
+#### Alta prioridade
 - [A1] Matriz pontuada com critérios eliminatórios → §4.5.
 - [A2] Matriz HA/DR × SKU × criticidade → §10.5.
 - [A3] Ressalva regional API Center → §5.1, §6.5.
-- [A4] LGPD nomeada + direitos do titular + DPO → §2.3.1 (nova) + §7.7 + §7.8.
+- [A4] LGPD nomeada + direitos do titular + DPO → §2.3.1 + §7.7 + §7.8.
 - [A5] Setor regulado (BACEN/Open Finance/FAPI) como classe → §2.3.2 + §7.7.
-- [A6] Matriz "classe de API × controles mínimos" → §7.7 (nova).
-- [A7] FinOps + showback/chargeback + custo observabilidade → §8.6 (nova).
-- [A8] Modelo de exceção com ciclo de vida formal → §11.5 (nova).
-- [A9] Quadro executivo "decida em 5 perguntas" → §1.1 (nova).
+- [A6] Matriz "classe de API × controles mínimos" → §7.7.
+- [A7] FinOps + showback/chargeback + custo observabilidade → §8.6.
+- [A8] Modelo de exceção com ciclo de vida formal → §11.5.
+- [A9] Quadro executivo "decida em 5 perguntas" → §1.1.
 
-### Média prioridade
-- [M1] Self-service vs aprovado → §11.6 (nova).
-- [M2] Roadmap com owner + critério de aceite → §13.2 refatorada (tabela).
-- [M3] GraphQL/WebSocket/OData/AI gateway integrados → §6.6 (nova).
-- [M4] Drift detection com ferramentas concretas → §9.4.1 expandida.
-- [M5] Multi-instância: repos + sincronização → §9.5 (nova).
-- [M6] Runbooks/playbooks mínimos → §10.6 (nova).
-- [M7] Threat model por classe + OWASP → §7.6 (nova).
+#### Média prioridade
+- [M1] Self-service vs aprovado → §11.6.
+- [M2] Roadmap com owner + critério de aceite → §13.2.
+- [M3] GraphQL/WebSocket/OData/AI gateway integrados → §6.6.
+- [M4] Drift detection com ferramentas concretas → §9.4.1.
+- [M5] Multi-instância: repos + sincronização → §9.5.
+- [M6] Runbooks/playbooks mínimos → §10.6.
+- [M7] Threat model por classe + OWASP → §7.6.
 
-### Baixa prioridade
-- [B1] Citações inline em fatos críticos → adicionadas em §1.2, §3.3, §3.4, §6.6.
-- [B2] Anti-pattern "escolha tardia de SKU/região" → §12.1 #13 (novo).
-- [B3] Anti-pattern "governança central sem caminho rápido" → §12.1 #14 (novo).
+#### Baixa prioridade
+- [B1] Citações inline em fatos críticos → §1.2, §3.3, §3.4, §6.6.
+- [B2] Anti-pattern "escolha tardia de SKU/região" → §12.1 #13.
+- [B3] Anti-pattern "governança central sem caminho rápido" → §12.1 #14.
 
-### Estrutura
-- Sumário executivo dividido em §1 + §1.1 (5 perguntas) + §1.2 (Brasil).
-- §2 separado em escopo (§2.1), audiência (§2.2) e drivers regulatórios (§2.3).
-- §11 expandida com §11.5 (exceção) e §11.6 (self-service).
-- §12 expandida de 12 para 14 anti-patterns.
-- §13 reformulada com roadmap tabular.
+---
 
-### Itens não endereçados nesta versão (candidatos a v3)
-- Diagrama visual completo (apenas descrição em §5.3).
-- Estudo de caso passo-a-passo de implementação por classe.
-- Apêndice com exemplos de policy XML para cada classe (§7.7).
-- Apêndice com modelo de ADR.
+## Apêndice A — Exemplos de policy XML por classe (§7.7)
+
+> Os fragmentos abaixo são **referência**. Em produção: usar Policy Fragments, named values do Key Vault para chaves, e validar com lint.
+
+### A.1 Classe "Interna"
+
+```xml
+<policies>
+  <inbound>
+    <base />
+    <set-header name="x-correlation-id" exists-action="skip">
+      <value>@(context.RequestId)</value>
+    </set-header>
+    <validate-azure-ad-token tenant-id="{{tenant-id}}">
+      <audiences>
+        <audience>api://internal-{{api-name}}</audience>
+      </audiences>
+      <required-claims>
+        <claim name="appid" match="any">
+          <value>{{allowed-client-appid}}</value>
+        </claim>
+      </required-claims>
+    </validate-azure-ad-token>
+    <rate-limit-by-key calls="600" renewal-period="60" counter-key="@(context.Subscription?.Id ?? "anon")" />
+  </inbound>
+  <backend><base /></backend>
+  <outbound>
+    <set-header name="Server" exists-action="delete" />
+    <set-header name="X-Powered-By" exists-action="delete" />
+    <base />
+  </outbound>
+  <on-error><base /></on-error>
+</policies>
+```
+
+### A.2 Classe "Externa B2B"
+
+```xml
+<policies>
+  <inbound>
+    <base />
+    <ip-filter action="allow">
+      <address-range from="{{partner-cidr-start}}" to="{{partner-cidr-end}}" />
+    </ip-filter>
+    <validate-azure-ad-token tenant-id="{{tenant-id}}">
+      <audiences>
+        <audience>api://b2b-{{api-name}}</audience>
+      </audiences>
+    </validate-azure-ad-token>
+    <validate-content unspecified-content-type-action="prevent" max-size="262144" size-exceeded-action="prevent">
+      <content type="application/json" validate-as="json" action="prevent" />
+    </validate-content>
+    <rate-limit-by-key calls="120" renewal-period="60" counter-key="@(context.Subscription.Id)" />
+    <quota-by-key calls="100000" renewal-period="86400" counter-key="@(context.Subscription.Id)" />
+    <set-header name="x-correlation-id" exists-action="skip"><value>@(context.RequestId)</value></set-header>
+  </inbound>
+  <backend><base /></backend>
+  <outbound>
+    <set-header name="Server" exists-action="delete" />
+    <base />
+  </outbound>
+  <on-error><base /></on-error>
+</policies>
+```
+
+### A.3 Classe "Sensível (LGPD)"
+
+```xml
+<policies>
+  <inbound>
+    <base />
+    <validate-azure-ad-token tenant-id="{{tenant-id}}">
+      <audiences>
+        <audience>api://sensitive-{{api-name}}</audience>
+      </audiences>
+      <required-claims>
+        <claim name="scp" match="any">
+          <value>{{required-scope}}</value>
+        </claim>
+      </required-claims>
+    </validate-azure-ad-token>
+    <validate-content unspecified-content-type-action="prevent" max-size="524288" size-exceeded-action="prevent">
+      <content type="application/json" validate-as="json" action="prevent" />
+    </validate-content>
+    <rate-limit-by-key calls="60" renewal-period="60" counter-key="@(context.Subscription.Id)" />
+    <set-variable name="subjectId" value="@((string)context.Request.MatchedParameters.GetValueOrDefault("subjectId",""))" />
+    <log-to-eventhub logger-id="audit-lgpd" partition-id="0">
+      @{
+        return new JObject(
+          new JProperty("ts", DateTime.UtcNow.ToString("o")),
+          new JProperty("correlationId", context.RequestId),
+          new JProperty("operation", context.Operation.Name),
+          new JProperty("subjectIdHash", context.Variables.GetValueOrDefault<string>("subjectId").GetHashCode()),
+          new JProperty("scopes", context.Request.Headers.GetValueOrDefault("Authorization",""))
+        ).ToString();
+      }
+    </log-to-eventhub>
+  </inbound>
+  <backend><base /></backend>
+  <outbound>
+    <set-header name="Cache-Control" exists-action="override"><value>no-store</value></set-header>
+    <base />
+  </outbound>
+  <on-error><base /></on-error>
+</policies>
+```
+
+### A.4 Classe "Regulada/financeira (Open Finance)"
+
+```xml
+<policies>
+  <inbound>
+    <base />
+    <choose>
+      <when condition="@(context.Request.Certificate == null || !context.Request.Certificate.VerifyChainWithFAPIRoot())">
+        <return-response>
+          <set-status code="401" reason="mTLS required for Open Finance" />
+        </return-response>
+      </when>
+    </choose>
+    <validate-jwt header-name="Authorization" require-scheme="Bearer">
+      <openid-config url="{{openfinance-issuer-discovery}}" />
+      <audiences><audience>{{openfinance-audience}}</audience></audiences>
+      <required-claims>
+        <claim name="cnf" match="all" />
+        <claim name="scope" match="any">
+          <value>{{openfinance-scope}}</value>
+        </claim>
+      </required-claims>
+    </validate-jwt>
+    <set-header name="x-fapi-interaction-id" exists-action="skip">
+      <value>@(context.RequestId)</value>
+    </set-header>
+    <rate-limit-by-key calls="300" renewal-period="60" counter-key="@(context.Subscription.Id)" />
+    <log-to-eventhub logger-id="audit-openfinance" partition-id="0">
+      @{
+        return new JObject(
+          new JProperty("ts", DateTime.UtcNow.ToString("o")),
+          new JProperty("interactionId", context.RequestId),
+          new JProperty("op", context.Operation.Name),
+          new JProperty("client", context.Request.Certificate?.SubjectName?.Name)
+        ).ToString();
+      }
+    </log-to-eventhub>
+  </inbound>
+  <backend>
+    <forward-request fail-on-error-status-code="true" />
+  </backend>
+  <outbound>
+    <base />
+  </outbound>
+  <on-error><base /></on-error>
+</policies>
+```
+
+> **Nota:** `VerifyChainWithFAPIRoot()` é placeholder; em produção usar `authentication-certificate` + validação na cadeia ICP do Open Finance Brasil [29b].
+
+### A.5 Classe "Administrativa"
+
+```xml
+<policies>
+  <inbound>
+    <base />
+    <ip-filter action="allow">
+      <address-range from="{{admin-vnet-start}}" to="{{admin-vnet-end}}" />
+    </ip-filter>
+    <validate-azure-ad-token tenant-id="{{tenant-id}}">
+      <required-claims>
+        <claim name="roles" match="any">
+          <value>APIMAdmin</value>
+        </claim>
+      </required-claims>
+    </validate-azure-ad-token>
+  </inbound>
+  <backend><base /></backend>
+  <outbound><base /></outbound>
+  <on-error><base /></on-error>
+</policies>
+```
+
+### A.6 Classe "Pública não autenticada"
+
+```xml
+<policies>
+  <inbound>
+    <base />
+    <rate-limit calls="60" renewal-period="60" />
+    <quota calls="100000" renewal-period="86400" />
+    <cors allow-credentials="false">
+      <allowed-origins><origin>*</origin></allowed-origins>
+      <allowed-methods><method>GET</method></allowed-methods>
+    </cors>
+  </inbound>
+  <backend><base /></backend>
+  <outbound>
+    <set-header name="Cache-Control" exists-action="override"><value>public, max-age=60</value></set-header>
+    <base />
+  </outbound>
+  <on-error><base /></on-error>
+</policies>
+```
+
+---
+
+## Apêndice B — Esqueleto OpenAPI corporativo
+
+```yaml
+openapi: 3.0.3
+info:
+  title: "{nome-da-api}"
+  version: "1.0.0"
+  description: |
+    {descrição curta}
+    - Owner: {squad / lead / on-call}
+    - Classe (§7.7): {interna | externa-b2b | sensivel | regulada | administrativa | publica}
+    - Base legal LGPD: {n/a | art. 7º §X}
+    - Retenção mínima de log: {90d | 1a | 2a | 5a | 7a}
+  contact:
+    name: "Time {squad}"
+    email: "{squad}@empresa.com"
+  license:
+    name: "Uso interno corporativo"
+
+servers:
+  - url: "https://api.empresa.com/{produto}/v1"
+    description: Produção
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: "{recurso}"
+    description: "Operações sobre {recurso}"
+
+paths:
+  /{recurso}:
+    get:
+      tags: ["{recurso}"]
+      summary: "Lista {recurso}"
+      operationId: "list{Recurso}"
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20, maximum: 100 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/{Recurso}List"
+        "400": { $ref: "#/components/responses/Problem" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+        "500": { $ref: "#/components/responses/Problem" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Problem:
+      type: object
+      description: "RFC 7807 application/problem+json"
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+        correlationId: { type: string }
+    "{Recurso}":
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        nome: { type: string, maxLength: 200 }
+    "{Recurso}List":
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/{Recurso}" }
+        total: { type: integer }
+  responses:
+    Problem:
+      description: "Erro padronizado (RFC 7807)"
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+```
+
+---
+
+## Apêndice C — Template de ADR (Architecture Decision Record)
+
+```markdown
+# ADR-APIM-{NNN}: {Título da decisão}
+
+- **Status:** Proposta | Aceita | Substituída por ADR-APIM-{MMM} | Obsoleta
+- **Data:** AAAA-MM-DD
+- **Decisores:** {nome — papel}, {nome — papel}
+- **Consultados:** {DPO, Segurança, FinOps, Auditoria, …}
+- **Informados:** {Squads consumidoras, Plataforma}
+
+## 1. Contexto
+{Problema, restrições, requisitos regulatórios, prazo. Citar drivers de §2.3 quando aplicável.}
+
+## 2. Opções avaliadas
+- Opção A: {descrição} — prós/contras
+- Opção B: {descrição} — prós/contras
+- Opção C: {descrição} — prós/contras
+
+## 3. Decisão
+{Opção escolhida e justificativa enxuta.}
+
+## 4. Consequências
+- Positivas
+- Negativas
+- Riscos aceitos
+- Riscos mitigados
+
+## 5. Critérios de revalidação
+- Eventos que disparam revisão (mudança regulatória, disponibilidade regional, mudança de SKU, métrica X estourando)
+- Frequência mínima de revisão: trimestral / semestral / anual.
+
+## 6. Mapeamento RACI
+| Atividade | Squad | Plataforma | Segurança | DPO/Compliance |
+|---|---|---|---|---|
+| Implementação | R | A | C | I |
+| Monitoramento | R | R | C | I |
+
+## 7. Referências
+- §X do guia APIM corporativo (v3)
+- [n] da §15
+- Documentos internos
+```
+
+---
+
+## Apêndice D — Fragmento de pipeline (GitHub Actions YAML)
+
+```yaml
+name: apim-ci
+
+on:
+  pull_request:
+    paths:
+      - "apis/**"
+      - "policies/**"
+      - "bicep/**"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  lint-openapi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Spectral lint OpenAPI
+        uses: stoplightio/spectral-action@v0.8.11
+        with:
+          file_glob: "apis/**/*.yaml"
+          spectral_ruleset: ".spectral.yaml"
+
+  lint-policy-xml:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: xmllint policies
+        run: |
+          sudo apt-get update && sudo apt-get install -y libxml2-utils
+          find policies -name "*.xml" -print0 | xargs -0 -I{} xmllint --noout "{}"
+      - name: Policy linter customizado
+        run: ./scripts/policy-lint.sh policies/
+
+  validate-class-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verifica ficha de intake (classe regulatória)
+        run: ./scripts/check-intake-class.sh apis/
+
+  bicep-what-if:
+    runs-on: ubuntu-latest
+    needs: [lint-openapi, lint-policy-xml, validate-class-gate]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: az deployment what-if
+        run: |
+          az deployment group what-if \
+            --resource-group rg-apim-corp \
+            --template-file bicep/main.bicep \
+            --parameters @bicep/parameters/dev.json
+
+  drift-report:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: APIOps Toolkit extractor
+        run: ./tools/apiops-extractor.sh > artifacts/extracted-config/
+      - name: Compare to repo
+        run: diff -r apis/ artifacts/extracted-config/ > drift-report.txt || true
+      - name: Upload drift report
+        uses: actions/upload-artifact@v4
+        with:
+          name: drift-report
+          path: drift-report.txt
+```
+
+---
+
+## Apêndice E — Glossário
+
+| Sigla | Expansão | Observação |
+|---|---|---|
+| ADR | Architecture Decision Record | Registro de decisão arquitetural; ver Apêndice C |
+| ANPD | Autoridade Nacional de Proteção de Dados | Autoridade brasileira de LGPD |
+| AKS | Azure Kubernetes Service | Para self-hosted gateway |
+| API | Application Programming Interface | — |
+| BACEN | Banco Central do Brasil | — |
+| BCP | Business Continuity Plan | Plano de continuidade |
+| CIDR | Classless Inter-Domain Routing | Notação de bloco IP |
+| CMN | Conselho Monetário Nacional | Emite resoluções complementares ao BACEN |
+| CORS | Cross-Origin Resource Sharing | Política HTTP |
+| DCR | Dynamic Client Registration | Registro dinâmico de cliente OAuth (RFC 7591) |
+| DNS | Domain Name System | — |
+| DPO | Data Protection Officer / Encarregado | Papel exigido pela LGPD |
+| DR | Disaster Recovery | Continuidade pós-incidente |
+| DX | Developer Experience | Experiência do desenvolvedor |
+| FAPI | Financial-grade API | Perfil de segurança OpenID para finanças (1.0 e 2.0) |
+| FAPI 1.0 | Versão 1.0 do FAPI | Usada pelo Open Finance Brasil |
+| FinOps | Cloud Financial Operations | Disciplina de governança de custo em nuvem |
+| HMAC | Hash-based Message Authentication Code | Para integridade |
+| IaC | Infrastructure as Code | Bicep, Terraform, etc. |
+| ICP | Infraestrutura de Chaves Públicas | Cadeia ICP-Brasil ou ICP do Open Finance |
+| JAR | JWT-Secured Authorization Request | RFC 9101 |
+| JWS | JSON Web Signature | RFC 7515 |
+| JWT | JSON Web Token | RFC 7519 |
+| LGPD | Lei Geral de Proteção de Dados (Lei 13.709/2018) | Brasil |
+| M2M | Machine-to-Machine | OAuth client credentials |
+| MAP | Microsoft Architecture Plan | Intake / blueprint |
+| MAU | Monthly Active Users | Métrica de uso |
+| MCP | Model Context Protocol | Protocolo para ferramentas de IA |
+| MPAS | Microsoft Partner Architectural Solution | Modelo de proposta |
+| mTLS | Mutual TLS | Autenticação cliente+servidor por certificado |
+| NIST CSF | NIST Cybersecurity Framework | Padrão americano de cibersegurança |
+| OAuth | Open Authorization | RFC 6749 + RFC 9700 (BCP) |
+| OIDC | OpenID Connect | Camada sobre OAuth 2.0 |
+| OWASP | Open Web Application Security Project | — |
+| PCI-DSS | Payment Card Industry Data Security Standard | — |
+| PII | Personally Identifiable Information | Dados pessoais |
+| PIM | Privileged Identity Management | Azure AD/Entra ID |
+| PKCE | Proof Key for Code Exchange | RFC 7636, para clientes públicos |
+| RACI | Responsible / Accountable / Consulted / Informed | Matriz de responsabilidades |
+| RBAC | Role-Based Access Control | Azure RBAC |
+| RIPD | Relatório de Impacto à Proteção de Dados Pessoais | Exigido pela LGPD em certos casos |
+| RPO | Recovery Point Objective | Janela máxima de perda de dado |
+| RTO | Recovery Time Objective | Janela máxima de recuperação |
+| SIEM | Security Information and Event Management | Ex.: Microsoft Sentinel |
+| SKU | Stock Keeping Unit | Tier do APIM (Basic/Standard/Premium etc.) |
+| SLA | Service Level Agreement | Contrato com consumidor |
+| SLO | Service Level Objective | Meta operacional interna |
+| SOC | Security Operations Center | Time de operações de segurança |
+| TLS | Transport Layer Security | — |
+| TPS | Transactions Per Second | — |
+| VNet | Virtual Network | Azure |
+| WAF | Web Application Firewall | Application Gateway / Front Door |
+
+---
+
+## Apêndice F — Mapeamento ISO 27001 / NIST CSF → controles APIM
+
+Mapeamento ilustrativo (não exaustivo) para apoiar conversa com auditoria/compliance:
+
+| Controle ISO 27001:2022 (Anexo A) | NIST CSF 2.0 | Onde aterrissa em APIM |
+|---|---|---|
+| A.5.7 Threat intelligence | ID.RA-02 | §7.6 threat model + Defender for APIs [25] |
+| A.5.15 Access control | PR.AA-01 | §7.1, §7.2, §7.7 |
+| A.5.18 Access rights provisioning | PR.AA-05 | RBAC §8.3 + PIM |
+| A.5.23 Use of cloud services | GV.SC-04 | §8.1, §13.2, ADRs |
+| A.5.30 ICT readiness for business continuity | RC.RP-01 | §10.5 HA/DR + §10.6 runbooks |
+| A.6.7 Remote working | PR.AA-04 | §7.1 PIM + Entra ID |
+| A.8.2 Privileged access rights | PR.AA-05 | PIM + custom roles |
+| A.8.5 Secure authentication | PR.AA-01 | §7.2 OAuth/OIDC, FAPI, mTLS |
+| A.8.9 Configuration management | PR.PS-01 | §9 APIOps + drift §9.4.1 |
+| A.8.15 Logging | DE.AE-03 | §10.1, §10.2, §7.8 |
+| A.8.16 Monitoring activities | DE.CM-01 | Sentinel + Defender for APIs |
+| A.8.20 Networks security | PR.IR-01 | §8.5 rede privada, VNet |
+| A.8.21 Security of network services | PR.IR-01 | WAF, Private Link |
+| A.8.23 Web filtering | PR.PT-04 | Front Door + WAF |
+| A.8.24 Use of cryptography | PR.DS-02 | mTLS, TLS, Key Vault |
+| A.8.26 Application security requirements | PR.PS-06 | §7.5 policies; §7.7 matriz vinculante |
+| A.8.28 Secure coding | PR.PS-06 | Lint OpenAPI + policies |
+| A.8.29 Security testing in development & acceptance | PR.PS-06 | §9.3 gates |
+| A.8.31 Separation of development, test and production | PR.PS-01 | §12.1 #12 anti-pattern |
+| A.8.32 Change management | PR.PS-01 | §11.6 self-service vs governado |
+| A.8.34 Protection during audit & testing | PR.PS-02 | §11.5 exceções + evidências |
+
+> Para mapear controles a evidências reais: a cada controle, registrar em sistema GRC o link para PR/issue/runbook/relatório que demonstra implementação.
+
+---
+
+## Apêndice G — 1-pager executivo
+
+> Para reunião de patrocínio / steerco. Imprimir 1 página.
+
+### Por que APIM corporativo agora
+
+APIM é o ponto técnico onde residência (LGPD/BACEN), exposição (parceiros/internet), segurança (mTLS, OAuth, FAPI), catálogo e governança de APIs ganham forma operacional. Sem ele padronizado, cada domínio resolve à sua maneira → fragmentação, custo, risco regulatório.
+
+### A decisão central (5 perguntas — §1.1)
+
+1. Residência Brasil obrigatória? → hoje, Premium clássico (Premium v2 não listado em Brazil South [1][3]).
+2. API regulada (Open Finance/LGPD sensível/PCI)? → classe regulada com FAPI/mTLS (§7.7).
+3. Externa ou interna? → WAF obrigatório para externa.
+4. Domínio com autonomia/SLO próprio? → instância dedicada (modelo C).
+5. Multi-region ativo / self-hosted gateway? → Premium clássico mandatório.
+
+### Recomendação
+
+**Modelo C — híbrido governado**: APIM corporativo padrão + instâncias dedicadas por exceção justificada (§4.5). Plataforma compartilhada por padrão; dedicada por gate.
+
+### Os 6 "verdes" que precisamos para entregar
+
+1. ADR de modelo + SKU + região (30 dias).
+2. APIM corporativo via IaC + Azure Policy guardrails (60 dias).
+3. Pipeline APIOps com gate de classe regulatória (90 dias).
+4. Threat model por classe (90 dias).
+5. DR ensaiado por criticidade (180 dias).
+6. Self-service ≥ 70 % dos PRs (240 dias).
+
+### Custos e riscos chave
+
+- Driver dominante de custo: Log Analytics ingestion + Defender for APIs + multi-region unit (§8.6).
+- Risco regulatório principal: classe regulada (Open Finance) sem mTLS / sem retenção 5+ anos.
+- Risco de execução principal: governança central sem caminho rápido → §11.6.
+
+### Decisões pendentes do cliente (§14)
+
+Residência, classes do roadmap, aprovadores de exceção, owner FinOps, RTO/RPO formal, política de retenção.
