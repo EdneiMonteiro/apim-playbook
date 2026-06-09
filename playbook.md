@@ -991,38 +991,59 @@ Decisões só responsáveis pelo cliente, com gate associado:
 ### Azure API Management — conceitos, tiers, regiões e recursos
 
 [1] Microsoft Learn — API Management feature-based comparison (v1, v2, Consumption, self-hosted). https://learn.microsoft.com/azure/api-management/api-management-features
+
 [2] Microsoft Learn — APIM v2 tiers overview. https://learn.microsoft.com/azure/api-management/v2-service-tiers-overview
+
 [3] Microsoft Azure — Region availability for APIM v2 SKUs. https://azure.microsoft.com/explore/global-infrastructure/products-by-region
+
 [4] Microsoft Learn — Migrate from stv1 to stv2 (lifecycle). https://learn.microsoft.com/azure/api-management/migrate-stv1-to-stv2
+
 [5] Microsoft Learn — Workspaces in APIM Premium. https://learn.microsoft.com/azure/api-management/workspaces-overview
+
 [6] Microsoft Learn — Capacity metric and units. https://learn.microsoft.com/azure/api-management/api-management-capacity
+
 [7] Microsoft Learn — Multi-region deployment (Premium clássico). https://learn.microsoft.com/azure/api-management/api-management-howto-deploy-multi-region
+
 [8] Microsoft Learn — Self-hosted gateway overview. https://learn.microsoft.com/azure/api-management/self-hosted-gateway-overview
+
 [9] Microsoft Learn — Backup and restore APIM. https://learn.microsoft.com/azure/api-management/api-management-howto-disaster-recovery-backup-restore
+
 [10] Microsoft Learn — Azure API Center overview. https://learn.microsoft.com/azure/api-center/overview
+
 [11] Microsoft Learn — Aposentadoria de analytics clássicos APIM (março/2027). https://learn.microsoft.com/azure/api-management/breaking-changes/
+
 [12] Microsoft Learn — GenAI gateway capabilities (token limit, semantic caching). https://learn.microsoft.com/azure/api-management/genai-gateway-capabilities
 
 ### Rede, conectividade, resiliência e arquitetura
 
 [13] Azure Architecture Center — APIOps Toolkit. https://github.com/Azure/apiops
+
 [14] Microsoft Learn — Deploy APIM with Bicep/Terraform via what-if. https://learn.microsoft.com/azure/azure-resource-manager/templates/deploy-what-if
+
 [15] Microsoft Learn — VNet integration (internal/external). https://learn.microsoft.com/azure/api-management/api-management-using-with-internal-vnet
 
 ### Policies, segurança, identidade e padrões externos
 
 [16] Microsoft Learn — validate-azure-ad-token policy. https://learn.microsoft.com/azure/api-management/validate-azure-ad-token-policy
+
 [17] Microsoft Learn — Defender for APIs. https://learn.microsoft.com/azure/defender-for-cloud/defender-for-apis-introduction
+
 [18] Microsoft Learn — APIM logging and monitoring options. https://learn.microsoft.com/azure/api-management/observability
+
 [19] Microsoft Learn — Mutual TLS (mTLS). https://learn.microsoft.com/azure/api-management/api-management-howto-mutual-certificates-for-clients
+
 [20] OWASP API Security Top 10 — 2023. https://owasp.org/API-Security/editions/2023/en/0x00-header/
+
 [21] IETF — RFC 9700, Best Current Practice for OAuth 2.0 Security. https://datatracker.ietf.org/doc/rfc9700/
+
 [22] OpenID Foundation — FAPI 1.0 (Financial-grade API). https://openid.net/specs/openid-financial-api-part-1-1_0.html
+
 [23] OpenID Foundation — FAPI 2.0 Security Profile. https://openid.net/specs/fapi-security-profile-2_0.html
 
 ### API design, catálogo, produtos e developer experience
 
 [24] Microsoft Learn — API Center registry & metadata. https://learn.microsoft.com/azure/api-center/key-concepts
+
 [25] Microsoft Learn — Defender for APIs detection. https://learn.microsoft.com/azure/defender-for-cloud/defender-for-apis-introduction
 
 ### DevOps, APIOps, IaC e qualidade
@@ -1032,22 +1053,31 @@ Decisões só responsáveis pelo cliente, com gate associado:
 ### Operações, observabilidade e monitoramento
 
 [30] Azure Pricing Calculator — APIM, Log Analytics, Defender for APIs, Front Door. https://azure.microsoft.com/pricing/calculator/
+
 [31] Microsoft Learn — Monitor APIM with Azure Monitor. https://learn.microsoft.com/azure/api-management/api-management-howto-use-azure-monitor
+
 [32] Microsoft Learn — Application Insights integration with APIM. https://learn.microsoft.com/azure/api-management/api-management-howto-app-insights
 
 ### Landing zone, governança e Azure Policy
 
 [33] Microsoft Learn — Azure Landing Zones design areas. https://learn.microsoft.com/azure/cloud-adoption-framework/ready/landing-zone/design-areas
+
 [34] Microsoft Learn — Azure Policy built-in definitions for API Management. https://learn.microsoft.com/azure/api-management/policy-reference
+
 [35] Microsoft Learn — Azure Policy guest configuration and remediation. https://learn.microsoft.com/azure/governance/policy/concepts/guest-configuration
 
 ### Regulatório (Brasil)
 
 [27] ANPD — Resolução CD/ANPD nº 15, de 24 de abril de 2024 (regulamento de comunicação de incidente de segurança envolvendo dados pessoais). https://www.gov.br/anpd/pt-br/assuntos/noticias/anpd-publica-regulamento-de-comunicacao-de-incidente-de-seguranca
+
 [28] BACEN — Resolução BCB nº 32, de 29 de outubro de 2020 (Open Banking/Open Finance, requisitos e cronograma). https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolu%C3%A7%C3%A3o%20BCB&numero=32
+
 [28b] BACEN — Resolução BCB nº 198, de 11 de março de 2022 (uso de serviços de computação em nuvem por instituições financeiras). https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolu%C3%A7%C3%A3o%20BCB&numero=198
+
 [28c] CMN — Resolução CMN nº 4.893, de 26 de fevereiro de 2021 (política de segurança cibernética e requisitos para contratação de serviços de processamento e armazenamento de dados e de computação em nuvem). https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolu%C3%A7%C3%A3o%20CMN&numero=4893
+
 [29] Open Finance Brasil — Portal oficial (convenção, manuais técnicos, padrões). https://openfinancebrasil.org.br/
+
 [29b] Open Finance Brasil — Padrões de segurança (FAPI 1.0 perfil brasileiro). https://openfinancebrasil.atlassian.net/wiki/spaces/OF/pages/17378602/Padr+es+T+cnicos
 
 > **Nota sobre URLs regulatórias:** as URLs listadas foram a referência ao tempo desta consolidação. Atos normativos podem ser republicados; **antes de uso em auditoria, a equipe de compliance confirma o ato vigente** (número, ano, redação) na fonte oficial.
