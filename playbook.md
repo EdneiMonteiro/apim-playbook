@@ -1,7 +1,4 @@
-# Plataforma APIM corporativa em Azure — guia técnico de decisão e implantação (v3)
-
-> **Versão:** v3 — consolidada em resposta à revisão da versão anterior (nota v2: B+/A−).
-> **Changelog v2 → v3:** ver §16 ao final. Mudanças desta versão: referências regulatórias específicas (§15), exemplos numéricos de SLO por classe (§10.4), protocolo de comunicação de sunset (§11.4), citação validada de TPS por unit + tabela de custo por componente (§8.6), notas de rodapé com responsável/prazo em vez de "Verificar" (§3.4/§6.6), glossário de siglas (Apêndice E), apêndices operacionais A (policy XML por classe), B (OpenAPI esqueleto), C (ADR template), D (pipeline YAML), F (mapeamento ISO 27001/NIST CSF), G (1-pager executivo).
+# Plataforma APIM corporativa em Azure — guia técnico de decisão e implantação
 
 ---
 
@@ -1055,60 +1052,6 @@ Decisões só responsáveis pelo cliente, com gate associado:
 
 > **Nota sobre URLs regulatórias:** as URLs listadas foram a referência ao tempo desta consolidação. Atos normativos podem ser republicados; **antes de uso em auditoria, a equipe de compliance confirma o ato vigente** (número, ano, redação) na fonte oficial.
 
----
-
-## 16. Changelog
-
-### 16.1 v2 → v3 (esta versão)
-
-Itens da revisão da versão anterior endereçados:
-
-| Item | Onde | Status |
-|---|---|---|
-| R9-1 — URLs específicas para [27][28][29] + clarificar Res. CMN 4.893/2021 vs BCB 198/2022 | §2.3.2, §15 | ✅ |
-| R10-1 — Validar "2.500 TPS por unit" + tabela "componente × custo unitário típico" | §8.6.1, §8.6.2 (nova) | ✅ |
-| R12-1 — Resolver placeholders "(continuação...)" em §15 | §15 (referências [30]-[35] adicionadas) | ✅ |
-| R12-2 — Glossário de siglas | Apêndice E (novo) | ✅ |
-| R3-1 — Exemplos de policy XML por classe | Apêndice A (novo) | ✅ |
-| R1-1 — "Verificar" → nota de rodapé com responsável/prazo | §3.4, §6.6 | ✅ |
-| R2-1 — Apêndice OpenAPI esqueleto | Apêndice B (novo) | ✅ |
-| R4-1 — Apêndice ADR template | Apêndice C (novo) | ✅ |
-| R5-1 — Apêndice pipeline YAML | Apêndice D (novo) | ✅ |
-| R6-1 — SLO numérico por classe | §10.4.1 (novo) | ✅ |
-| R8-1 — Protocolo de sunset multicanal | §11.4.1 (novo) | ✅ |
-| R11-1 — Mapeamento ISO 27001 / NIST CSF | Apêndice F (novo) | ✅ |
-| R13-1 — 1-pager executivo | Apêndice G (novo) | ✅ |
-
-### 16.2 v1 → v2 (versão anterior)
-
-Itens da revisão da versão inicial:
-
-#### Alta prioridade
-- [A1] Matriz pontuada com critérios eliminatórios → §4.5.
-- [A2] Matriz HA/DR × SKU × criticidade → §10.5.
-- [A3] Ressalva regional API Center → §5.1, §6.5.
-- [A4] LGPD nomeada + direitos do titular + DPO → §2.3.1 + §7.7 + §7.8.
-- [A5] Setor regulado (BACEN/Open Finance/FAPI) como classe → §2.3.2 + §7.7.
-- [A6] Matriz "classe de API × controles mínimos" → §7.7.
-- [A7] FinOps + showback/chargeback + custo observabilidade → §8.6.
-- [A8] Modelo de exceção com ciclo de vida formal → §11.5.
-- [A9] Quadro executivo "decida em 5 perguntas" → §1.1.
-
-#### Média prioridade
-- [M1] Self-service vs aprovado → §11.6.
-- [M2] Roadmap com owner + critério de aceite → §13.2.
-- [M3] GraphQL/WebSocket/OData/AI gateway integrados → §6.6.
-- [M4] Drift detection com ferramentas concretas → §9.4.1.
-- [M5] Multi-instância: repos + sincronização → §9.5.
-- [M6] Runbooks/playbooks mínimos → §10.6.
-- [M7] Threat model por classe + OWASP → §7.6.
-
-#### Baixa prioridade
-- [B1] Citações inline em fatos críticos → §1.2, §3.3, §3.4, §6.6.
-- [B2] Anti-pattern "escolha tardia de SKU/região" → §12.1 #13.
-- [B3] Anti-pattern "governança central sem caminho rápido" → §12.1 #14.
-
----
 
 ## Apêndice A — Exemplos de policy XML por classe (§7.7)
 
