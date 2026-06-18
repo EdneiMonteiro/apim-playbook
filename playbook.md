@@ -725,16 +725,16 @@ Latência p99 acima refere-se ao tempo gateway (excluindo backend); SLO ao consu
 
 | Criticidade | SKU base recomendado | HA dentro de região | DR (multi-region) | RTO | RPO | Runbook |
 |---|---|---|---|---|---|---|
-| **Crítica regulada (Open Finance, pagamentos)** | Premium clássico | Sim (AZs nativo) | Sim, ativo-ativo entre regiões | < 5 min | ~0 | Runbook DR ensaiado anualmente |
-| **Alta (negócio essencial)** | Premium clássico ou Premium v2 (onde houver) | Sim (AZs) | Ativo-passivo entre regiões | < 30 min | < 5 min | Runbook DR ensaiado semestralmente |
-| **Média (negócio importante)** | Standard v2 | AZs nativo | Backup/restore + IaC recriação | < 4 h | < 1 h | Runbook DR documentado, ensaio anual |
-| **Baixa (interno auxiliar)** | Basic v2 ou Standard v2 | AZs onde disponível | IaC recreate | < 24 h | < 24 h | IaC + smoke test |
+| **Crítica regulada (Open Finance, pagamentos)** | Premium clássico | Sim — AZs (zone-redundant) | Sim, ativo-ativo entre regiões (nativo) | < 5 min | ~0 | Runbook DR ensaiado anualmente |
+| **Alta (negócio essencial)** | Premium clássico ou Premium v2 (onde houver) | Sim — AZs (Premium / Premium v2) | Premium clássico: ativo-passivo entre regiões. Premium v2: **sem multi-region nativo** — usar IaC + 2ª instância | < 30 min | < 5 min | Runbook DR ensaiado semestralmente |
+| **Média (negócio importante)** | Standard v2 | **Não suporta AZ** (redundância por múltiplas unidades, sem zona) | **Sem backup/restore nativo**; DR por IaC + recriação | < 4 h | < 1 h | Runbook DR documentado, ensaio anual |
+| **Baixa (interno auxiliar)** | Basic v2 ou Standard v2 | **Não suporta AZ** | DR por IaC recreate | < 24 h | < 24 h | IaC + smoke test |
 | **Sandbox/Dev** | Developer | Não | Não | — | — | — |
 
 Observações:
+- **Availability Zones: apenas Premium clássico e Premium v2.** Basic v2 e Standard v2 **não** suportam AZ [1]. Confirmar disponibilidade de zonas na região (Brazil South suporta para os tiers elegíveis; Brazil Southeast verificar).
 - Premium v2 hoje **não cobre multi-region ativo-ativo**; para crítica regulada, Premium clássico é mandatório [1].
-- Backup/restore só em Premium clássico; em outros SKUs, depender de IaC + recriação.
-- AZ-aware: confirmar suporte a Availability Zones na região (Brazil South suporta; Brazil Southeast verificar).
+- **Backup/restore: disponível nos tiers clássicos** (Developer/Basic/Standard/Premium); **não disponível nos tiers v2** — nestes, DR depende de IaC + recriação.
 - Multi-region cross-border: avaliar se a regulação permite (LGPD/BACEN podem exigir residência).
 
 ### 10.6 Runbooks/playbooks operacionais mínimos
@@ -1169,6 +1169,15 @@ Decisões só responsáveis pelo cliente, com gate associado:
     </validate-content>
     <rate-limit-by-key calls="60" renewal-period="60" counter-key="@(context.Subscription.Id)" />
     <set-variable name="subjectId" value="@((string)context.Request.MatchedParameters.GetValueOrDefault("subjectId",""))" />
+    <!-- NUNCA logar o header Authorization / bearer token. Registrar apenas claims ja validadas pelo validate-azure-ad-token acima (scope, client_id). -->
+    <set-variable name="authScope" value="@{
+        var jwt = context.Request.Headers.GetValueOrDefault("Authorization","").Replace("Bearer ","").Trim().AsJwt();
+        return jwt?.Claims.GetValueOrDefault("scp","") ?? "";
+    }" />
+    <set-variable name="authClientId" value="@{
+        var jwt = context.Request.Headers.GetValueOrDefault("Authorization","").Replace("Bearer ","").Trim().AsJwt();
+        return jwt?.Claims.GetValueOrDefault("appid","") ?? "";
+    }" />
     <log-to-eventhub logger-id="audit-lgpd" partition-id="0">
       @{
         return new JObject(
@@ -1176,7 +1185,8 @@ Decisões só responsáveis pelo cliente, com gate associado:
           new JProperty("correlationId", context.RequestId),
           new JProperty("operation", context.Operation.Name),
           new JProperty("subjectIdHash", context.Variables.GetValueOrDefault<string>("subjectId").GetHashCode()),
-          new JProperty("scopes", context.Request.Headers.GetValueOrDefault("Authorization",""))
+          new JProperty("scope", context.Variables.GetValueOrDefault<string>("authScope","")),
+          new JProperty("clientId", context.Variables.GetValueOrDefault<string>("authClientId",""))
         ).ToString();
       }
     </log-to-eventhub>
