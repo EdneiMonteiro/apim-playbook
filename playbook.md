@@ -1592,7 +1592,7 @@ O desenho APIM deve ser lido junto com os **Online Services Terms (OST)** e o **
         var jwt = context.Request.Headers.GetValueOrDefault(&quot;Authorization&quot;,&quot;&quot;).Replace(&quot;Bearer &quot;,&quot;&quot;).Trim().AsJwt();
         var cnf = jwt?.Claims.GetValueOrDefault(&quot;cnf&quot;,&quot;&quot;) ?? &quot;&quot;;
         if (String.IsNullOrEmpty(cnf)) { return &quot;&quot;; }
-        return JObject.Parse(cnf).Value<string>(&quot;x5t#S256&quot;) ?? &quot;&quot;;
+        return (string)JObject.Parse(cnf)[&quot;x5t#S256&quot;] ?? &quot;&quot;;
     }" />
 
     <choose>
