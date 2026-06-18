@@ -139,15 +139,15 @@ Para evitar confusão recorrente:
 | Developer | Sandbox, testes, treinamento | Produção (sem SLA) |
 | Basic v2 | Produção leve, sem VNet integrada, sem multi-region | Regulado, residência crítica que exija recursos não listados, cenários híbridos |
 | Standard v2 | Produção média, sem VNet integrada nativa avançada | Multi-region, self-hosted, workspaces |
-| Premium v2 | Produção crítica (onde listado regionalmente), capacidade alta | Multi-region nativa, self-hosted gateway, backup/restore, múltiplos custom domains, e qualquer cenário híbrido pesado — não cobertos hoje [1] |
-| Premium clássico | Multi-region, VNet integrada, self-hosted gateway, workspaces, backup/restore, múltiplos custom domains | Cargas leves; o custo não se justifica para escopo reduzido |
+| Premium v2 | Produção crítica (onde listado regionalmente), capacidade alta, VNet injection e múltiplos custom domains no gateway | Multi-region nativa, self-hosted gateway, backup/restore e qualquer cenário híbrido pesado — não cobertos hoje [1][2] |
+| Premium clássico | Multi-region, VNet integrada, self-hosted gateway, workspaces, backup/restore, múltiplos custom domains no gateway | Cargas leves; o custo não se justifica para escopo reduzido |
 | Consumption | APIs internas leves, eventos esporádicos, prototipagem | Cargas com policies pesadas, latência crítica, requisitos VNet |
 
 **Decisão SKU resumida:**
-- Cenário híbrido com self-hosted gateway → **Premium clássico** (Premium v2 não cobre, conforme [1]).
+- Cenário híbrido com self-hosted gateway → **Premium clássico** (Premium v2 não cobre, conforme [1][2]).
 - Multi-region ativo/ativo nativo → **Premium clássico**.
-- Carga corporativa moderna, sem necessidade de multi-region/self-hosted, na região onde Premium v2 está listado → **Premium v2** ou Standard v2.
-- Brasil + requisito de VNet ou multi-region hoje → **Premium clássico** (até Premium v2 ser listado em Brazil South) [1][3].
+- Carga corporativa moderna, sem necessidade de multi-region/self-hosted/backup-restore, na região onde Premium v2 está listado → **Premium v2** ou Standard v2.
+- Brasil + requisito de VNet hoje → **Premium clássico** até Premium v2 estar listado em Brazil South; Brasil + multi-region nativo → **Premium clássico** [1][3].
 
 ### 3.4 Disponibilidade regional e nota específica sobre Brasil
 
@@ -521,28 +521,40 @@ Custo de APIM não vem apenas da licença do SKU. Vem de quatro grandes drivers:
 
 #### 8.6.1 Sizing inicial
 
-- Estimar TPS pico × policy weight (cada policy adiciona ms; políticas de cache reduzem CPU).
-- Cada APIM unit Premium clássico atende, **como estimativa de planejamento**, da ordem de **~2.500 TPS com policies leves** — número de referência amplamente citado pela comunidade, mas que **não consta como SLA oficial em [6]**. Tratar como **ponto de partida**, e **validar em teste de carga** com as policies reais antes de comitar com FinOps/produto.
-- Multi-region adiciona unit por região; custo cresce linearmente.
+- Não use número fixo de TPS por unit como premissa de sizing ou orçamento. Throughput publicado ou citado é informativo, não é SLA e não deve ser usado para capacity/budget planning.
+- Dimensione a partir do perfil real esperado: pico de requisições, concorrência, tamanho de payload, latência do backend, reutilização de conexões, TLS, número e custo das policies, cache, transformação, validação JWT/mTLS e logs.
+- **Teste de carga representativo é obrigatório** antes de comprometer FinOps/produto. O teste deve refletir payloads, policies, backends, observabilidade e p95/p99 esperados em produção.
+- Para operação e autoscale, use métricas sustentadas de capacidade/CPU/memória, latência, erros e saturação por período prolongado; não tome decisão por spike curto.
+- Multi-region e unidades adicionais aumentam custo conforme meter aplicável por SKU/região. Revalidar preços no Azure Pricing Calculator [30].
 
 #### 8.6.2 Tabela "componente × custo unitário típico" (referência)
 
-Valores ilustrativos para sizing rápido — **revalidar no Azure Pricing Calculator** [30] para sua subscrição/região:
+Valores de lista consultados na Azure Retail Prices API para `API Management` em `brazilsouth`, acesso em **2026-06-18**. Cálculo mensal usa **730 h/mês**. Preços em USD, sem desconto, MACC, EA, impostos ou câmbio; **revalidar no Azure Pricing Calculator [30]**.
 
-| Componente | Unidade de cobrança | Faixa típica (referência) | Observação |
-|---|---|---|---|
-| APIM Premium clássico | por unit-hora, por região | ordem de centenas USD/mês/unit | Multi-region multiplica |
-| APIM Standard v2 | por unit-hora | dezenas USD/mês | Sem multi-region nativo |
-| APIM Basic v2 | por unit-hora | unidades USD/mês | Cargas leves |
-| Log Analytics ingestion | por GB ingerido | sensível ao volume | Tiered retention reduz custo |
-| Log Analytics retention | por GB/mês após retenção incluída | linear com retenção | Archive tier reduz |
-| Defender for APIs | por API monitorada | por unidade | Habilitar por classe |
-| Application Gateway WAF v2 | por capacity unit | hourly + por dado | Necessário para externo |
-| Front Door Premium | por endpoint + dado processado | hourly + GB | Inclui WAF |
-| Private Link endpoint | hourly + por GB processado | hourly fixo | Adiciona por endpoint |
-| Egress regional | por GB de saída | linear | Otimizar via cache/compressão |
+| Componente / meter | Região | Unidade de cobrança | Preço lista | ≈ USD/mês | Driver / observação |
+|---|---:|---:|---:|---:|---|
+| APIM Basic v2 Unit | Brazil South | unit-hora | US$0.20548/h | US$150 | Custo base por unit |
+| APIM Basic v2 Calls | Brazil South | 10K chamadas | tier incluído; depois ~US$0.03/10K | variável | Depende do volume de chamadas |
+| APIM Standard v2 Unit | Brazil South | unit-hora | US$0.95890/h | US$700 | Custo base por unit |
+| APIM Standard v2 Secondary Unit | Brazil South | unit-hora | US$0.68493/h | US$500 | Unidades adicionais conforme billing meter |
+| APIM Standard v2 Self-hosted Gateway | Brazil South | gateway-hora | US$0.34247/h | US$250 | Depende de gateways habilitados |
+| APIM Standard v2 Workspace Pack | Brazil South | pack-hora | US$0.13699/h | US$100 | Depende de workspaces/packs |
+| APIM Standard v2 Calls | Brazil South | 10K chamadas | tier incluído; depois ~US$0.025/10K | variável | Depende do volume de chamadas |
+| APIM Premium clássico Unit | Brazil South | unit-hora, por região | US$3.82900/h | US$2.795 | Multi-region multiplica por unit/região |
+| APIM Gateway Unit (clássico/self-hosted) | Brazil South | gateway-hora | US$0.34247/h | US$250 | Meter de gateway/self-hosted clássico |
+| APIM Premium v2 Unit | Brazil South | unit-hora | US$3.83562/h | US$2.800 | Custo base por unit |
+| APIM Premium v2 Secondary Unit | Brazil South | unit-hora | US$1.91781/h | US$1.400 | Unidades adicionais conforme billing meter |
+| APIM Premium v2 Self-hosted Gateway | Brazil South | gateway-hora | US$0.34247/h | US$250 | Depende de gateways habilitados |
+| APIM Premium v2 Workspace Pack | Brazil South | pack-hora | US$0.13699/h | US$100 | Depende de workspaces/packs |
+| Log Analytics ingestion | região do workspace | por GB ingerido | variável | variável | Volume de logs, plano Analytics/Basic/Auxiliary, sampling e filtros |
+| Log Analytics retention | região do workspace | GB/mês após retenção incluída | variável | variável | Dias de retenção hot/warm/archive e volume retido |
+| Defender for APIs | região/plano Defender | por API/overage conforme plano | variável | variável | Quantidade de APIs monitoradas e overage |
+| Application Gateway WAF v2 | região do gateway | gateway-hora + capacity unit + tráfego | variável | variável | Capacidade, autoscale, WAF, regras e outbound data transfer |
+| Front Door Premium | global | base fee + requests + data transfer | variável | variável | Requests, GB edge-cliente, GB edge-origem; WAF/Private Link incluídos no Premium |
+| Private Link endpoint | região do endpoint | endpoint-hora + GB processado | variável | variável | Número de endpoints e dados processados |
+| Egress regional | região de saída | GB de saída | variável | variável | Brazil South em zona de cobrança de bandwidth; otimizar com cache/compressão |
 
-> Não use esta tabela como cotação. Use como **ordem de grandeza** para identificar drivers dominantes e decidir onde otimizar. Cotação real é do FinOps/procurement com base em [30].
+> Não use esta tabela como cotação. Use como baseline FinOps para identificar drivers dominantes. Cotação real deve ser revalidada por FinOps/procurement no Azure Pricing Calculator [30] e na subscrição do cliente.
 
 #### 8.6.3 Tagging e showback/chargeback
 
@@ -725,16 +737,16 @@ Latência p99 acima refere-se ao tempo gateway (excluindo backend); SLO ao consu
 
 | Criticidade | SKU base recomendado | HA dentro de região | DR (multi-region) | RTO | RPO | Runbook |
 |---|---|---|---|---|---|---|
-| **Crítica regulada (Open Finance, pagamentos)** | Premium clássico | Sim (AZs nativo) | Sim, ativo-ativo entre regiões | < 5 min | ~0 | Runbook DR ensaiado anualmente |
-| **Alta (negócio essencial)** | Premium clássico ou Premium v2 (onde houver) | Sim (AZs) | Ativo-passivo entre regiões | < 30 min | < 5 min | Runbook DR ensaiado semestralmente |
-| **Média (negócio importante)** | Standard v2 | AZs nativo | Backup/restore + IaC recriação | < 4 h | < 1 h | Runbook DR documentado, ensaio anual |
-| **Baixa (interno auxiliar)** | Basic v2 ou Standard v2 | AZs onde disponível | IaC recreate | < 24 h | < 24 h | IaC + smoke test |
+| **Crítica regulada (Open Finance, pagamentos)** | Premium clássico | Sim — AZs (zone-redundant) | Sim, ativo-ativo entre regiões (nativo) | < 5 min | ~0 | Runbook DR ensaiado anualmente |
+| **Alta (negócio essencial)** | Premium clássico ou Premium v2 (onde houver) | Sim — AZs (Premium / Premium v2) | Premium clássico: ativo-passivo entre regiões. Premium v2: **sem multi-region nativo** — usar IaC + 2ª instância | < 30 min | < 5 min | Runbook DR ensaiado semestralmente |
+| **Média (negócio importante)** | Standard v2 | **Não suporta AZ** (redundância por múltiplas unidades, sem zona) | **Sem backup/restore nativo**; DR por IaC + recriação | < 4 h | < 1 h | Runbook DR documentado, ensaio anual |
+| **Baixa (interno auxiliar)** | Basic v2 ou Standard v2 | **Não suporta AZ** | DR por IaC recreate | < 24 h | < 24 h | IaC + smoke test |
 | **Sandbox/Dev** | Developer | Não | Não | — | — | — |
 
 Observações:
+- **Availability Zones: apenas Premium clássico e Premium v2.** Basic v2 e Standard v2 **não** suportam AZ [1]. Confirmar disponibilidade de zonas na região (Brazil South suporta para os tiers elegíveis; Brazil Southeast verificar).
 - Premium v2 hoje **não cobre multi-region ativo-ativo**; para crítica regulada, Premium clássico é mandatório [1].
-- Backup/restore só em Premium clássico; em outros SKUs, depender de IaC + recriação.
-- AZ-aware: confirmar suporte a Availability Zones na região (Brazil South suporta; Brazil Southeast verificar).
+- **Backup/restore: disponível nos tiers clássicos** (Developer/Basic/Standard/Premium); **não disponível nos tiers v2** — nestes, DR depende de IaC + recriação.
 - Multi-region cross-border: avaliar se a regulação permite (LGPD/BACEN podem exigir residência).
 
 ### 10.6 Runbooks/playbooks operacionais mínimos
@@ -1169,6 +1181,15 @@ Decisões só responsáveis pelo cliente, com gate associado:
     </validate-content>
     <rate-limit-by-key calls="60" renewal-period="60" counter-key="@(context.Subscription.Id)" />
     <set-variable name="subjectId" value="@((string)context.Request.MatchedParameters.GetValueOrDefault("subjectId",""))" />
+    <!-- NUNCA logar o header Authorization / bearer token. Registrar apenas claims ja validadas pelo validate-azure-ad-token acima (scope, client_id). -->
+    <set-variable name="authScope" value="@{
+        var jwt = context.Request.Headers.GetValueOrDefault("Authorization","").Replace("Bearer ","").Trim().AsJwt();
+        return jwt?.Claims.GetValueOrDefault("scp","") ?? "";
+    }" />
+    <set-variable name="authClientId" value="@{
+        var jwt = context.Request.Headers.GetValueOrDefault("Authorization","").Replace("Bearer ","").Trim().AsJwt();
+        return jwt?.Claims.GetValueOrDefault("appid","") ?? "";
+    }" />
     <log-to-eventhub logger-id="audit-lgpd" partition-id="0">
       @{
         return new JObject(
@@ -1176,7 +1197,8 @@ Decisões só responsáveis pelo cliente, com gate associado:
           new JProperty("correlationId", context.RequestId),
           new JProperty("operation", context.Operation.Name),
           new JProperty("subjectIdHash", context.Variables.GetValueOrDefault<string>("subjectId").GetHashCode()),
-          new JProperty("scopes", context.Request.Headers.GetValueOrDefault("Authorization",""))
+          new JProperty("scope", context.Variables.GetValueOrDefault<string>("authScope","")),
+          new JProperty("clientId", context.Variables.GetValueOrDefault<string>("authClientId",""))
         ).ToString();
       }
     </log-to-eventhub>
