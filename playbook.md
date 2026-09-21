@@ -1,32 +1,32 @@
-# Plataforma APIM corporativa em Azure — guia técnico de decisão e implantação
+# Plataforma APIM corporativa em Azure: guia técnico de decisão e implantação
 
 ---
 
 ## 1. Sumário executivo
 
-API Management (APIM) em Azure é a peça central de uma estratégia de APIs corporativa: ponto único de exposição governada, autenticação, autorização, throttling, observabilidade, catálogo e contrato com produtores e consumidores. Ele não substitui a engenharia das APIs; ele formaliza o contorno entre quem produz, quem governa e quem consome.
+API Management (APIM) em Azure centraliza a exposição governada de APIs, autenticação, autorização, throttling, observabilidade, catálogo e contratos com produtores e consumidores. Não substitui a engenharia das APIs; define os controles e as responsabilidades de produção, governança e consumo.
 
-Para uma corporação grande, três decisões dominam o desenho: **modelo de adoção** (corporativo, por domínio, ou híbrido governado), **SKU/tier** (clássico v1, v2 ou Premium v2) e **arquitetura de rede/isolamento** (público com WAF, interno via VNet, workspaces com isolamento lógico e/ou runtime dedicado por workspace gateway). A escolha precisa ser sustentada por requisitos regulatórios, residência, modelo de exposição e maturidade de plataforma — não por preferência tática.
+Para uma grande empresa, o desenho depende de três decisões: **modelo de adoção** (corporativo, por domínio ou híbrido governado), **SKU/tier** (clássico v1, v2 ou Premium v2) e **arquitetura de rede/isolamento** (público com WAF, interno via VNet, workspaces com isolamento lógico e/ou runtime dedicado por workspace gateway). A escolha precisa considerar requisitos regulatórios, residência, modelo de exposição e maturidade da plataforma, em vez de preferências pontuais.
 
-A recomendação base é **modelo híbrido/federado governado**: uma plataforma APIM corporativa com guardrails, padrões e catálogo, mais a possibilidade controlada de instâncias dedicadas para domínios com requisitos distintos (residência, regulatório, exposição, SLO). Plataforma compartilhada por padrão; instância dedicada por exceção justificada.
+A recomendação base é o **modelo híbrido/federado governado**: uma plataforma APIM corporativa compartilhada, com controles de governança, padrões e catálogo. Instâncias dedicadas são permitidas por exceção justificada para domínios com requisitos distintos de residência, regulação, exposição ou SLO.
 
-### 1.1 Decida em 5 perguntas (quadro executivo)
+### 1.1 Cinco perguntas para a decisão (quadro executivo)
 
-Use este quadro para o gate inicial. Cada resposta empurra o desenho para um SKU/região/modelo específico. As respostas devem ser documentadas em ADR no início do programa.
+Use este quadro na avaliação inicial. As respostas orientam a escolha de SKU, região e modelo e devem ser documentadas em ADR no início do programa.
 
 | # | Pergunta | Se a resposta é… | Decisão indicada |
 |---|----------|------------------|------------------|
-| 1 | A API atende **clientes/dados restritos a região brasileira** (residência exigida)? | Sim | Restringir SKU ao que está disponível em Brazil South/Brazil Southeast; hoje **Basic v2/Standard v2** disponíveis; **Premium v2 ainda não listado** em Brazil South — confirmar antes de assumir [1][3]. Avaliar Premium clássico se VNet integrada/multi-region for crítica. |
+| 1 | A API atende **clientes/dados restritos à região brasileira** (residência exigida)? | Sim | Restringir SKU ao que está disponível em Brazil South/Brazil Southeast; hoje **Basic v2/Standard v2** disponíveis; **Premium v2 ainda não listado** em Brazil South; confirmar antes de assumir [1][3]. Avaliar Premium clássico se VNet integrada/multi-region for crítica. |
 | 2 | A API é **regulada** (Open Finance, BACEN, ANPD/LGPD com dados sensíveis, PCI)? | Sim | Tratar como classe "regulada" (§7.7). Exige OAuth/OIDC, mTLS quando aplicável (FAPI), audit log retido conforme norma, residência confirmada, threat model documentado, DPO ciente. |
 | 3 | A API é **exposta a parceiros/internet** ou apenas **interna**? | Externa | Premium clássico VNet externa + WAF, ou v2 com Application Gateway/Front Door + WAF; APIM nunca publicado diretamente sem WAF para externo. |
-| 4 | O domínio tem **autonomia operacional e SLO próprios** (próprio time, runbook, on-call)? | Sim, forte | Considerar instância dedicada (modelo B/híbrido). Caso contrário, fica no APIM corporativo compartilhado. |
+| 4 | O domínio tem **autonomia operacional e SLO próprios** (equipe própria, runbook, plantão)? | Sim, forte | Considerar instância dedicada (modelo B/híbrido). Caso contrário, fica no APIM corporativo compartilhado. |
 | 5 | Volume previsto **excede capacidade do tier escolhido** ou exige **multi-region/DR ativo**? | Sim | Premium clássico (única opção atual com multi-region nativo e self-hosted gateway). Premium v2 não cobre esses cenários hoje [1]. |
 
-### 1.2 Ponto crítico Brasil
+### 1.2 Disponibilidade no Brasil
 
-Disponibilidade regional **muda a recomendação**: o que vale para US East/West Europe pode não valer para Brazil South. No momento desta consolidação (referência **maio/2026**, revalidada contra docs Microsoft de junho/2026), em Brazil South estão listados **Basic v2 e Standard v2**; **Premium v2 não consta na matriz pública** consultada [1][3]. Workspaces não são exclusivos do Premium clássico: existem em **Basic v2, Standard v2, Premium e Premium v2**; já **workspace gateway dedicado** é um runtime separado, com disponibilidade regional/custo próprios, e deve ser confirmado antes de ser assumido [1][5]. Premium clássico continua relevante para VNet injection, multi-region e self-hosted gateway, recursos não cobertos por Premium v2.
+A disponibilidade regional condiciona a recomendação: os recursos disponíveis em US East/West Europe podem não estar disponíveis em Brazil South. No momento desta consolidação (referência **maio/2026**, revalidada com a documentação Microsoft de junho/2026), em Brazil South estão listados **Basic v2 e Standard v2**; **Premium v2 não consta na matriz pública** consultada [1][3]. Workspaces existem em **Basic v2, Standard v2, Premium e Premium v2**. Já o **workspace gateway dedicado** é um runtime separado, com disponibilidade regional e custo próprios, que devem ser confirmados antes de sua inclusão na arquitetura [1][5]. Premium clássico continua relevante para VNet injection, multi-region e self-hosted gateway, recursos não cobertos por Premium v2.
 
-Implicação: **se residência em Brasil for um requisito não negociável e o desenho exigir VNet integrada ou multi-region, hoje a única rota é Premium clássico, com plano de migração assistido para v2 quando o tier estiver disponível** (acompanhar [1][3]). Decisões devem ser datadas e revisadas trimestralmente.
+Implicação: **se a residência no Brasil for obrigatória e o desenho exigir VNet integrada ou multi-region, hoje a única opção é Premium clássico, com plano de migração assistida para v2 quando o tier estiver disponível** (acompanhar [1][3]). Decisões devem ser datadas e revisadas trimestralmente.
 
 ---
 
@@ -34,19 +34,19 @@ Implicação: **se residência em Brasil for um requisito não negociável e o d
 
 Grandes empresas tipicamente operam dezenas a centenas de APIs em múltiplos domínios (produto, plataforma, dados, parceiros, mobile, integrações B2B), com regimes distintos de regulação, criticidade, exposição (interna, parceira, pública) e governança (centralizada, federada, autônoma).
 
-Adotar Azure de forma estratégica significa, entre outras coisas, **resolver como APIs entram, saem e circulam** dentro e fora da nuvem com segurança, controle e governança. APIM é o ponto técnico onde a maior parte dessas decisões ganha forma operacional.
+A adoção de Azure exige definir como as APIs serão expostas e consumidas dentro e fora da nuvem, com segurança, controle e governança. O APIM implementa grande parte dos controles decorrentes dessas decisões.
 
 Erros comuns que este documento busca prevenir:
 
-- Escolher modelo (centralizado vs distribuído) por preferência cultural, sem cruzar com regulação, escala e ownership.
+- Escolher o modelo centralizado ou distribuído por preferência cultural, sem considerar regulação, escala e responsabilidades.
 - Padronizar SKU/tier sem revisar o roteiro da Microsoft (v1 vs v2), aposentadoria de capacidades e disponibilidade regional.
-- Tratar APIM como proxy/network appliance, sem governança de produto, lifecycle, catálogo e developer experience.
+- Tratar APIM como proxy ou equipamento de rede, sem governança de produto, ciclo de vida, catálogo e experiência do desenvolvedor.
 - Mover governança para fora do APIM (manual, planilha, wiki), criando atrito sem ganho operacional.
 - Esquecer integração entre APIM, Microsoft Entra ID, Azure Policy, Defender for Cloud, observabilidade e pipelines.
 
 ### 2.1 Premissas e escopo
 
-- O cliente é uma empresa grande, com múltiplos domínios, parceiros, requisitos de regulação (LGPD, possivelmente setor financeiro/Open Finance, ANPD, BACEN) e times distribuídos.
+- O cliente é uma empresa grande, com múltiplos domínios, parceiros, requisitos de regulação (LGPD, possivelmente setor financeiro/Open Finance, ANPD, BACEN) e equipes distribuídas.
 - Há Azure Landing Zone (ou equivalente) com hub/spoke, Azure Policy, Log Analytics, Sentinel e Microsoft Entra ID.
 - O foco é APIs HTTP (REST, GraphQL, gRPC quando aplicável). Mensageria pura (Event Hubs/Service Bus) está fora do escopo do APIM, embora APIs orientadas a eventos possam ser fachadas via APIM.
 
@@ -63,11 +63,11 @@ Erros comuns que este documento busca prevenir:
 | FinOps/Procurement | §3.3, §8.6 |
 | Auditoria/Risco | §2.3, §7.7, §7.8, §11.5 |
 
-### 2.3 Drivers regulatórios (Brasil + setoriais)
+### 2.3 Requisitos regulatórios (Brasil e setores específicos)
 
-A escolha de modelo, SKU, região e controles deve ser ancorada em requisitos regulatórios datados e mapeados, não em interpretação subjetiva. Este documento parte do conjunto mínimo abaixo:
+A escolha de modelo, SKU, região e controles deve se basear em requisitos regulatórios identificados e datados. Este documento adota o conjunto mínimo abaixo:
 
-#### 2.3.1 LGPD (Lei nº 13.709/2018) — base obrigatória
+#### 2.3.1 LGPD (Lei nº 13.709/2018): base obrigatória
 
 - **Bases legais** (art. 7º): identificar a base que ampara cada API que trafega dado pessoal (consentimento, execução de contrato, obrigação legal, etc.). Sem base mapeada, não publicar.
 - **Direitos do titular** (art. 18): acesso, retificação, exclusão, portabilidade, anonimização, informação sobre compartilhamento. APIs de atendimento desses direitos devem ser identificadas, testadas e auditadas; APIM pode expor a fachada e roteá-los para o sistema-fonte.
@@ -79,12 +79,12 @@ Ver Resolução CD/ANPD nº 15/2024 (regulamento de comunicação de incidentes)
 
 #### 2.3.2 BACEN e Open Finance Brasil
 
-Aplica-se a instituições autorizadas e participantes do Open Finance. Drivers:
+Aplica-se a instituições autorizadas e participantes do Open Finance. Referências:
 
 - **Resolução BCB nº 32/2020** e ciclos seguintes definem fases, dados e serviços do Open Finance Brasil [28].
 - **Convenção Open Finance** e **manuais técnicos**: padrão FAPI 1.0 (Financial-grade API), DCR (Dynamic Client Registration), assinatura JWS, mTLS, JWT-Secured Authorization Request (JAR) [29][29b].
-- **Resolução BCB nº 198/2022** (uso de serviços de processamento/armazenamento e computação em nuvem por instituições financeiras) [28b] — exige inventário, contratos, residência confirmada quando aplicável, plano de continuidade e relação com terceiros.
-- **Resolução CMN nº 4.893/2021** (política de segurança cibernética e requisitos para contratação de serviços de processamento/armazenamento e computação em nuvem) [28c] — testes, gestão de incidente, comunicação a BACEN em prazos definidos. (Esta resolução substitui parte do escopo da antiga Res. CMN 4.658/2018; **a equipe de compliance confirma o ato vigente antes de uso em auditoria**.)
+- **Resolução BCB nº 198/2022** (uso de serviços de processamento/armazenamento e computação em nuvem por instituições financeiras) [28b]: exige inventário, contratos, residência confirmada quando aplicável, plano de continuidade e relação com terceiros.
+- **Resolução CMN nº 4.893/2021** (política de segurança cibernética e requisitos para contratação de serviços de processamento/armazenamento e computação em nuvem) [28c]: testes, gestão de incidente e comunicação ao BACEN em prazos definidos. Esta resolução substitui parte do escopo da antiga Res. CMN 4.658/2018; **a equipe de compliance confirma o ato vigente antes de uso em auditoria**.
 
 Implicação para APIM: APIs Open Finance são uma **classe própria** (§7.7), com mTLS obrigatório (cliente apresenta certificado emitido pela cadeia ICP/Open Finance), token JWT assinado, validação rígida de claims, logging completo com retenção mínima alinhada à norma (em geral 5 anos para registro de transações financeiras), e teste regular.
 
@@ -105,7 +105,7 @@ Toda API publicada no APIM corporativo deve, na ficha de intake, indicar:
 5. Aprovador regulatório (DPO, compliance setorial).
 6. Critérios de incidente e prazos de notificação.
 
-Sem esse mapeamento, o gate de publicação rejeita.
+Sem esse mapeamento, o gate bloqueia a publicação.
 
 ---
 
@@ -115,23 +115,23 @@ Sem esse mapeamento, o gate de publicação rejeita.
 
 Azure API Management é o gateway de APIs gerenciado da Microsoft em Azure. Conceitualmente, expõe três planos:
 
-- **Plano de gestão (control plane)** — ARM/Bicep/Terraform, portal, REST API, RBAC.
-- **Plano de runtime (data plane / gateway)** — recebe a requisição, aplica policies, autenticação, throttling, transformação, encaminha ao backend.
-- **Plano de desenvolvedor (developer plane)** — portal do desenvolvedor (Developer Portal), catálogo, documentação, onboarding, gestão de subscriptions.
+- **Plano de gestão (control plane)**: ARM/Bicep/Terraform, portal, REST API, RBAC.
+- **Plano de runtime (data plane / gateway)**: recebe a requisição, aplica policies, autenticação, throttling e transformação e encaminha ao backend.
+- **Plano de desenvolvedor (developer plane)**: portal do desenvolvedor (Developer Portal), catálogo, documentação, integração de consumidores e gestão de subscriptions.
 
 Capacidades centrais: policies declarativas (XML), produtos, APIs, operações, named values, certificados, identidades gerenciadas, integração com Azure Monitor/Log Analytics/Application Insights, Defender for APIs, Azure Policy. Em SKUs habilitados, também: VNet integration, multi-region, self-hosted gateway, **workspaces** (isolamento lógico em Basic v2, Standard v2, Premium e Premium v2) e **workspace gateways** (runtime dedicado/isolado quando disponível), Developer Portal customizado e API Center como inventário/catálogo corporativo [1][5].
 
 ### 3.2 Terminologia: clássico/v1, stv1/stv2, Consumption e tiers v2
 
-Para evitar confusão recorrente:
+Neste documento, os termos têm os seguintes significados:
 
-- **APIM clássico (v1)** — tiers Developer, Basic, Standard, Premium e Consumption. Arquitetura sobre máquina virtual (stv2 atual; stv1 já aposentado conforme [4]).
-- **APIM v2** — nova geração, arquitetura serverless, tiers **Basic v2**, **Standard v2** e **Premium v2** (em rollout regional). Trazem mudanças importantes em rede, escalabilidade, custos e recursos [1].
-- **Consumption** — tier pay-per-call, baseado em clássico. Adequado para cargas leves/serverless, com limitações (sem VNet integrada, sem self-hosted gateway, etc.).
-- **Workspaces** — limite **lógico** de governança/federação dentro de uma instância APIM. Na documentação atual, workspaces se aplicam a **Basic v2, Standard v2, Premium clássico e Premium v2** [1][5]. Um workspace contém APIs, produtos, subscriptions, named values e recursos relacionados, com RBAC escopado ao workspace.
-- **Gateway associado ao workspace** — limite de **runtime**. Um workspace pode usar o **default managed gateway** da instância (menor custo, menor isolamento) ou um **workspace gateway** separado (recurso dedicado, escala/hostname/rede próprios, custo e disponibilidade regional próprios) quando suportado [5].
+- **APIM clássico (v1)**: tiers Developer, Basic, Standard, Premium e Consumption. Arquitetura sobre máquina virtual (stv2 atual; stv1 já aposentado conforme [4]).
+- **APIM v2**: geração com arquitetura serverless, tiers **Basic v2**, **Standard v2** e **Premium v2** (em implantação regional). Difere do clássico em rede, escalabilidade, custos e recursos [1].
+- **Consumption**: tier com cobrança por chamada, baseado em clássico. Adequado para cargas leves/serverless, com limitações (sem VNet integrada, sem self-hosted gateway, etc.).
+- **Workspaces**: limite **lógico** de governança/federação dentro de uma instância APIM. Na documentação atual, workspaces se aplicam a **Basic v2, Standard v2, Premium clássico e Premium v2** [1][5]. Um workspace contém APIs, produtos, subscriptions, named values e recursos relacionados, com RBAC restrito ao workspace.
+- **Gateway associado ao workspace**: limite de **runtime**. Um workspace pode usar o **default managed gateway** da instância (menor custo, menor isolamento) ou um **workspace gateway** separado (recurso dedicado, escala/hostname/rede próprios, custo e disponibilidade regional próprios) quando suportado [5].
 
-> Ponto crítico de revisão: **workspace ≠ workspace gateway ≠ múltiplas instâncias**. Workspace resolve ownership, RBAC e catálogo federado; workspace gateway resolve isolamento de runtime; múltiplas instâncias resolvem isolamento de blast radius, região, SKU, quota e operação. Não justificar Premium clássico apenas porque “precisa de workspace”; justificar Premium clássico quando o requisito for multi-region nativo, self-hosted gateway, backup/restore ou VNet/maturidade operacional específica [1][5].
+> **Workspace, workspace gateway e múltiplas instâncias atendem a necessidades distintas.** Workspace delimita responsabilidades, RBAC e catálogo federado; workspace gateway isola o runtime; múltiplas instâncias separam o impacto de falhas, região, SKU, quota e operação. A necessidade de workspace, por si só, não justifica Premium clássico. Esse SKU deve ser justificado por requisitos de multi-region nativo, self-hosted gateway, backup/restore ou condições específicas de VNet e maturidade operacional [1][5].
 
 ### 3.3 Orientação por SKU/tier
 
@@ -140,33 +140,33 @@ Para evitar confusão recorrente:
 | Developer | Sandbox, testes, treinamento, self-hosted gateway apenas para avaliação | Produção (sem SLA) |
 | Basic v2 | Produção leve, workspaces lógicos, custo previsível | Regulado crítico, multi-region, self-hosted gateway, VNet injection |
 | Standard v2 | Produção média, workspaces lógicos, outbound VNet integration quando disponível, autoscale | Multi-region nativo, self-hosted gateway, backup/restore |
-| Premium v2 | Produção crítica (onde listado regionalmente), capacidade alta, VNet injection, múltiplos custom domains no gateway, workspaces | Multi-region nativa, self-hosted gateway, backup/restore — não cobertos hoje [1][2] |
+| Premium v2 | Produção crítica (onde listado regionalmente), capacidade alta, VNet injection, múltiplos custom domains no gateway, workspaces | Multi-region nativa, self-hosted gateway, backup/restore: não cobertos hoje [1][2] |
 | Premium clássico | Multi-region, VNet integrada, self-hosted gateway, backup/restore, múltiplos custom domains no gateway, workspaces | Cargas leves; o custo não se justifica para escopo reduzido |
 | Consumption | APIs internas leves, eventos esporádicos, prototipagem | Cargas com policies pesadas, latência crítica, requisitos VNet, WebSocket |
 
 **Decisão SKU resumida:**
 - Cenário híbrido com self-hosted gateway → **Premium clássico** em produção (Developer só avaliação), porque self-hosted gateway se aplica a Developer/Premium e Premium v2 não cobre [1][8].
 - Multi-region ativo/ativo nativo → **Premium clássico**.
-- Federação por times sem runtime dedicado → **workspaces com default managed gateway** em Basic v2/Standard v2/Premium/Premium v2, validando região e limites [1][5].
-- Federação por times com runtime isolado → **workspace gateway** quando listado para o SKU/região; tratar como recurso/custo independente e validar em ADR [5].
-- Carga corporativa moderna, sem necessidade de multi-region/self-hosted/backup-restore, na região onde Premium v2 está listado → **Premium v2** ou Standard v2.
+- Federação por equipes sem runtime dedicado → **workspaces com default managed gateway** em Basic v2/Standard v2/Premium/Premium v2, validando região e limites [1][5].
+- Federação por equipes com runtime isolado → **workspace gateway** quando listado para o SKU/região; tratar como recurso/custo independente e validar em ADR [5].
+- Carga corporativa sem necessidade de multi-region/self-hosted/backup-restore, na região onde Premium v2 está listado → **Premium v2** ou Standard v2.
 - Brasil + requisito de VNet injection hoje → **Premium clássico** até Premium v2 estar listado em Brazil South; Brasil + multi-region nativo → **Premium clássico** [1][3].
 
 ### 3.4 Disponibilidade regional e nota específica sobre Brasil
 
-A disponibilidade regional **muda decisões** e precisa ser checada antes de qualquer commitment. Referência atual consultada em **maio/2026** e revalidada contra docs Microsoft publicadas em **junho/2026** [1][3][5]:
+A disponibilidade regional precisa ser verificada antes de assumir compromissos de arquitetura ou contratação. Referência atual consultada em **maio/2026** e revalidada com a documentação Microsoft publicada em **junho/2026** [1][3][5]:
 
 - **Brazil South:** Basic v2 e Standard v2 listados. **Premium v2 não listado** na matriz consultada. Workspaces são recurso de Basic v2/Standard v2/Premium/Premium v2, mas **workspace gateway dedicado** deve ser confirmado na região antes de entrar no desenho.
 - **Brazil Southeast:** reduzido em recursos como nas demais regiões "Southeast" do Azure. Confirmar antes de assumir multi-region Brasil ativo/ativo.
 
 Implicações:
 
-1. Se a corporação tem **residência obrigatória em Brasil** (LGPD, BACEN, política interna) e precisa de Premium v2, a decisão não pode assumir disponibilidade sem evidência pública ou confirmação Microsoft. Premium clássico é a rota conservadora para VNet injection/multi-region/self-hosted.
+1. Se a corporação tem **residência obrigatória no Brasil** (LGPD, BACEN, política interna) e precisa de Premium v2, a decisão não pode assumir disponibilidade sem evidência pública ou confirmação Microsoft. Premium clássico é a opção conservadora para VNet injection/multi-region/self-hosted.
 2. Se a corporação aceita **multi-region cross-border** (Brasil + região secundária fora), Premium clássico pode aceitar multi-region; Premium v2 não tem multi-region nativo.
-3. API Center (catálogo corporativo) também tem **disponibilidade regional limitada** [10]; pode ser que precise rodar em região secundária e referenciar APIs hospedadas no Brasil — isso é aceitável desde que metadados não contenham dados sensíveis.
-4. Workspaces não resolvem residência por si só: eles isolam ownership e, quando associados a workspace gateway dedicado, podem isolar runtime. Região, rede e dados continuam sendo decisão de instância/gateway.
+3. API Center (catálogo corporativo) também tem **disponibilidade regional limitada** [10]; pode precisar operar em região secundária e referenciar APIs hospedadas no Brasil. Isso é aceitável desde que os metadados não contenham dados sensíveis.
+4. Workspaces não resolvem residência por si só: delimitam responsabilidades e, quando associados a workspace gateway dedicado, podem isolar runtime. Região, rede e dados continuam sendo decisões de instância/gateway.
 
-Tabela de disponibilidade — referência **maio/2026** (verificar [1], [3] e [5] antes de fechar arquitetura):
+Tabela de disponibilidade: referência **maio/2026** (verificar [1], [3] e [5] antes de definir a arquitetura):
 
 | Recurso | Brazil South | Brazil Southeast¹ | East US | West Europe |
 |---|---|---|---|---|
@@ -178,7 +178,7 @@ Tabela de disponibilidade — referência **maio/2026** (verificar [1], [3] e [5
 | Premium clássico (VNet, multi-region, self-hosted) | Disponível | Verificar¹ | Disponível | Disponível |
 | API Center | Verificar¹ | Não listado | Disponível | Disponível |
 
-¹ Itens marcados "Verificar" são revalidados **trimestralmente** pelo time de plataforma (owner: lead de arquitetura Azure) na matriz oficial [1][3][5]; última confirmação registrada em ADR-APIM-001.
+¹ Itens marcados "Verificar" são revalidados **trimestralmente** pela equipe de plataforma (responsável: líder de arquitetura Azure) na matriz oficial [1][3][5]; última confirmação registrada em ADR-APIM-001.
 
 > Recomendação: registrar a data da consulta e o link da matriz oficial na ADR. Revisar a cada trimestre.
 
@@ -186,32 +186,32 @@ Tabela de disponibilidade — referência **maio/2026** (verificar [1], [3] e [5
 
 ## 4. Modelos de adoção (corporativo, por subscrição/domínio, híbrido) com matriz de decisão
 
-Empresas grandes oscilam entre três modelos. Não há "certo absoluto" — há melhor encaixe para cada combinação de regulação, escala, autonomia, governança e maturidade.
+Grandes empresas adotam três modelos principais. A adequação de cada um depende de regulação, escala, autonomia, governança e maturidade.
 
-### 4.1 Modelo A — APIM corporativo compartilhado
+### 4.1 Modelo A: APIM corporativo compartilhado
 
-Uma (ou poucas) instância(s) APIM, operada(s) pela plataforma, expondo APIs de múltiplos domínios. **Workspaces** (Basic v2, Standard v2, Premium clássico ou Premium v2) segmentam ownership/RBAC/catálogo; **produtos** segmentam consumo/comercialização; **workspace gateways** segmentam runtime quando o isolamento dedicado é exigido e disponível [1][5].
+Uma ou poucas instâncias APIM, operadas pela equipe de plataforma, expõem APIs de múltiplos domínios. **Workspaces** (Basic v2, Standard v2, Premium clássico ou Premium v2) segmentam responsabilidades/RBAC/catálogo; **produtos** segmentam consumo/comercialização; **workspace gateways** segmentam runtime quando o isolamento dedicado é exigido e disponível [1][5].
 
 Vantagens: padronização forte; custo unitário menor; um único ponto de auditoria, catálogo e SLOs; superfície reduzida de exposição pública.
-Riscos: gargalo organizacional na plataforma; mistura de cargas com criticidade distinta; janelas de manutenção compartilhadas; "tragédia dos commons" em policies.
+Riscos: gargalo organizacional na plataforma; mistura de cargas com criticidade distinta; janelas de manutenção compartilhadas; uso de policies sem considerar o impacto nos recursos compartilhados.
 Sinais favoráveis: maturidade central forte, regulação homogênea entre domínios, volume médio.
 Sinais desfavoráveis: domínios com SLO/regulação heterogêneos, parceiros B2B exigindo isolamento, on-call distribuído sem suporte da plataforma.
 
-### 4.2 Modelo B — APIM por subscrição, projeto ou domínio
+### 4.2 Modelo B: APIM por subscrição, projeto ou domínio
 
 Cada domínio/squad opera sua instância APIM. Governança via Azure Policy, blueprints, templates corporativos.
 
 Vantagens: autonomia total; blast radius restrito; flexibilidade de SKU/região por domínio; políticas internas por domínio.
-Riscos: custo agregado alto; padronização frouxa; catálogo fragmentado; observabilidade fragmentada; superfície de exposição ampliada; difícil política regulatória uniforme.
+Riscos: custo agregado alto; padronização inconsistente; catálogo e observabilidade fragmentados; superfície de exposição ampliada; dificuldade de aplicar uma política regulatória uniforme.
 Sinais favoráveis: domínios autônomos com plataforma própria, regulação muito heterogênea (ex.: parte da empresa em Open Finance, parte não), M&A com integração ainda em curso.
-Sinais desfavoráveis: corporação com governança centralizada, time de plataforma pequeno, requisitos regulatórios uniformes.
+Sinais desfavoráveis: corporação com governança centralizada, equipe de plataforma pequena, requisitos regulatórios uniformes.
 
-### 4.3 Modelo C — Híbrido/federado governado (recomendado para corporações médias-grandes)
+### 4.3 Modelo C: híbrido/federado governado (recomendado para médias e grandes empresas)
 
-Plataforma corporativa opera o(s) APIM(s) padrão (modelo A) e habilita instâncias dedicadas mediante critérios objetivos (residência distinta, regulação específica, exposição parceira crítica, escala que justifique isolamento). O catálogo é unificado via **API Center** [10], a observabilidade vai para Log Analytics central, a governança técnica via Azure Policy e blueprints é mandatória independentemente do modelo.
+A equipe de plataforma corporativa opera as instâncias APIM padrão (modelo A) e habilita instâncias dedicadas mediante critérios objetivos (residência distinta, regulação específica, exposição crítica a parceiros, escala que justifique isolamento). O catálogo é unificado via **API Center** [10], a telemetria é enviada ao Log Analytics central e a governança técnica via Azure Policy e blueprints é obrigatória independentemente do modelo.
 
 Vantagens: padronização sem rigidez; autonomia justificada; catálogo único; melhor relação custo/risco.
-Riscos: complexidade de governança (a plataforma precisa ser madura); risco de "instância dedicada" virar regra por baixa fricção — exige gate.
+Riscos: complexidade de governança, que exige maturidade da plataforma; criação indiscriminada de instâncias dedicadas quando não há critérios de aprovação. A criação exige gate.
 Sinais favoráveis: grande maioria das corporações grandes com plataforma estabelecida.
 
 ### 4.4 Self-hosted gateway para cenários híbridos
@@ -224,7 +224,7 @@ Restrições: licenciamento por unidade, requer container runtime (Kubernetes re
 
 ### 4.5 Matriz de decisão pontuada (com critérios eliminatórios)
 
-A matriz qualitativa do v1 foi substituída por uma **matriz pontuada com critérios eliminatórios** para reduzir subjetividade.
+A **matriz pontuada com critérios eliminatórios** permite comparar os modelos com critérios explícitos e reduzir a subjetividade.
 
 #### 4.5.1 Critérios eliminatórios
 
@@ -249,17 +249,17 @@ Se qualquer um for "não" para o modelo escolhido, descartá-lo, independentemen
 | Governança regulatória | 3 | 3 | 1 | 3 |
 | Catálogo unificado | 2 | 3 | 1 | 3 |
 | Capacidade operacional / on-call | 2 | 3 | 1 | 2 |
-| **Pontuação total (máx. 63)** | — | **45** | **33** | **51** |
+| **Pontuação total (máx. 63)** | Não se aplica | **45** | **33** | **51** |
 
 Faixas indicativas: **0–30** desfavorável; **31–44** aceitável com ressalvas; **45+** favorável. Pontuações nominais devem ser recalculadas para o contexto específico (peso ajustado).
 
-Recomendação: para corporação grande, Modelo C é favorito por padrão, e essa é a recomendação base do documento. Modelos A ou B podem ser justificados em contextos específicos — desde que registrados em ADR.
+Recomendação: adotar o Modelo C como padrão para grandes empresas. Modelos A ou B podem ser justificados em contextos específicos, desde que a decisão seja registrada em ADR.
 
 ---
 
 ## 5. Arquitetura de referência
 
-Combina APIM como entry plane com Azure Landing Zone, Microsoft Entra ID, observabilidade central e pipelines IaC.
+A arquitetura combina APIM como camada de entrada com Azure Landing Zone, Microsoft Entra ID, observabilidade central e pipelines IaC.
 
 ### 5.1 Componentes recomendados
 
@@ -268,12 +268,12 @@ Combina APIM como entry plane com Azure Landing Zone, Microsoft Entra ID, observ
   - **Use Azure Front Door + WAF** quando o requisito é entrada global, multi-região, failover global, CDN/cache/edge, aceleração de tráfego e proteção no perímetro global [33].
   - **Use Application Gateway WAF v2** quando o requisito é entrada regional, integração forte com VNet, APIM interno, roteamento L7 por path/host dentro da landing zone, Private Link/backend privado e inspeção regional [15][33].
   - **Use ambos** quando há perímetro global + inspeção/regra regional: Front Door global → Application Gateway WAF regional → APIM interno. Evite dupla terminação TLS sem justificativa e documente headers, probes e health checks.
-- **Microsoft Entra ID** para autenticação humana (publishers, devs) e workload identities.
+- **Microsoft Entra ID** para autenticação humana (publicadores, desenvolvedores) e identidades de cargas de trabalho.
 - **Key Vault** para segredos, certificados e chaves de assinatura/encriptação.
 - **Log Analytics + Application Insights** para sinais de runtime; **Sentinel** para correlação de segurança.
 - **Defender for APIs** (Defender for Cloud) para detecção de anomalias e shadow APIs [25].
-- **API Center** [10] como inventário corporativo e catálogo unificado. **Ressalva:** API Center tem disponibilidade regional limitada; conferir se a região exigida tem o serviço — caso não, hospedar em região secundária e referenciar APIs do Brasil é aceitável, desde que metadados não contenham dados sensíveis.
-- **Azure Policy** para guardrails (naming, tagging, SKU permitidos, criptografia, region restriction).
+- **API Center** [10] como inventário corporativo e catálogo unificado. **Ressalva:** API Center tem disponibilidade regional limitada; conferir se a região exigida tem o serviço. Caso não tenha, é aceitável hospedar em região secundária e referenciar APIs do Brasil, desde que os metadados não contenham dados sensíveis.
+- **Azure Policy** para controles de governança (nomenclatura, tags, SKUs permitidos, criptografia, restrição de região).
 - **Bicep/Terraform + GitHub Actions/Azure DevOps** para IaC e pipelines APIOps.
 
 ### 5.2 Padrões de integração
@@ -314,24 +314,24 @@ Combina APIM como entry plane com Azure Landing Zone, Microsoft Entra ID, observ
           └── configura/observa APIM managed gateway e self-hosted gateways
 ```
 
-**Correção arquitetural importante:** self-hosted gateway **não é backend downstream** do gateway gerenciado. Ele é um runtime alternativo do data plane, implantado perto dos backends híbridos/multicloud, associado ao mesmo control plane do APIM para configuração, policies, catálogo e telemetria [8]. O tráfego do consumidor deve entrar no gateway adequado ao cenário; não se deve desenhar “managed gateway → self-hosted gateway” como caminho padrão.
+O self-hosted gateway **não é um backend do gateway gerenciado**. É um runtime alternativo do data plane, implantado perto dos backends híbridos/multicloud e associado ao mesmo control plane do APIM para configuração, policies, catálogo e telemetria [8]. O tráfego do consumidor deve entrar no gateway adequado ao cenário; “managed gateway → self-hosted gateway” não deve ser o caminho padrão.
 
 ---
 
-## 6. Padrões de API, lifecycle, versionamento, catálogo e consumo
+## 6. Padrões de API, ciclo de vida, versionamento, catálogo e consumo
 
 ### 6.1 Princípios de desenho de API
 
 - **Contratos OpenAPI 3.0+ obrigatórios** antes da publicação (intake MPAS/MAP, §6.2).
-- **Recursos REST** ou alternativas justificadas (GraphQL, gRPC). REST como default.
+- **Recursos REST** ou alternativas justificadas (GraphQL, gRPC). REST como padrão.
 - **Erros padronizados** (RFC 7807 problem+json).
 - **Versionamento explícito** (caminho `/v1`, `/v2`).
 - **Idempotência** documentada por verbo (PUT idempotente; POST não, mas pode oferecer chave de idempotência).
-- **Naming consistente** (kebab-case em paths; camelCase em payload JSON).
+- **Nomenclatura consistente** (kebab-case em paths; camelCase em payload JSON).
 
 ### 6.2 MPAS/MAP como intake obrigatório
 
-Toda API nova passa por um intake formal — **MPAS (Microsoft Partner Architectural Solution)** ou **MAP (Microsoft Architecture Plan)** como modelo, adaptado ao contexto corporativo. Contém:
+Toda API nova passa por uma avaliação inicial formal (intake), com **MPAS (Microsoft Partner Architectural Solution)** ou **MAP (Microsoft Architecture Plan)** como modelo, adaptado ao contexto corporativo. A avaliação contém:
 
 - Owner (squad, lead, on-call, DPO/compliance quando regulado).
 - Classificação (interna, externa B2B, sensível, regulada).
@@ -343,40 +343,40 @@ Toda API nova passa por um intake formal — **MPAS (Microsoft Partner Architect
 - Backend, rede, dependências.
 - Plano de retirada (sunset policy).
 
-Sem intake aprovado, a API não publica.
+Sem intake aprovado, a API não pode ser publicada.
 
-### 6.3 Lifecycle recomendado
+### 6.3 Ciclo de vida recomendado
 
 | Estado | Critério de entrada | Critério de saída |
 |---|---|---|
 | **Design** | Intake aprovado | OpenAPI + ADR |
-| **Develop** | OpenAPI assinado pelo owner | Build verde, testes unitários, lint |
-| **Pre-prod (UAT)** | Build promovido via pipeline | Validação consumer + segurança + perf básica |
+| **Develop** | OpenAPI assinado pelo owner | Build concluído com sucesso, testes unitários, lint |
+| **Pre-prod (UAT)** | Build promovido via pipeline | Validação do consumidor + segurança + desempenho básico |
 | **Produção** | Aprovação de release | Em uso pelos consumidores |
 | **Deprecated** | Substituta publicada (`/v2` ativa) | Comunicação a consumidores |
 | **Sunset** | Janela de deprecação encerrada | Remoção do APIM e do catálogo |
 
 ### 6.4 Versionamento e revisions
 
-- **Versão** para mudanças incompatíveis. O default corporativo é **path versioning** (`/v1`, `/v2`) por legibilidade, roteamento simples, cache/WAF previsíveis e menor ambiguidade operacional.
+- **Versão** para mudanças incompatíveis. O padrão corporativo é **path versioning** (`/v1`, `/v2`) por legibilidade, roteamento simples, cache/WAF previsíveis e menor ambiguidade operacional.
 - **Revision** para mudanças compatíveis dentro da mesma versão. Permite rollback rápido sem mudar contrato público.
 - **Política de deprecação mínima**: comunicação 90 dias antes; banner no Developer Portal; e-mail aos subscribers; remoção após sunset.
 
-Trade-offs obrigatórios em ADR quando o padrão `/v{n}` não for usado:
+Vantagens e riscos que devem ser registrados em ADR quando o padrão `/v{n}` não for usado:
 
 | Estratégia | Vantagens | Riscos / custo operacional | Quando aceitar |
 |---|---|---|---|
-| **Path** (`/v1/pagamentos`) | Claro para consumidores; fácil roteamento no APIM/WAF; bom para documentação, cache, analytics e coexistência | “Polui” URL; pode incentivar versionamento excessivo | **Default** para APIs públicas, B2B, mobile e reguladas |
-| **Query** (`?api-version=1`) | Útil quando path é imposto por legado; fácil testar side-by-side | Cache/proxy podem ignorar query; consumidores esquecem parâmetro; menos explícito em logs | APIs internas/legadas com contrato já estabilizado e gateway impondo default/validação |
+| **Path** (`/v1/pagamentos`) | Claro para consumidores; fácil roteamento no APIM/WAF; adequado para documentação, cache, analytics e coexistência | Acrescenta a versão à URL; pode incentivar versionamento excessivo | **Padrão** para APIs públicas, B2B, mobile e reguladas |
+| **Query** (`?api-version=1`) | Útil quando o path é imposto por legado; facilita testes em paralelo | Cache/proxy podem ignorar query; consumidores esquecem parâmetro; menos explícito em logs | APIs internas/legadas com contrato já estabilizado e gateway impondo valor padrão/validação |
 | **Header** (`api-version: 1`) | Preserva URL; permite negociação avançada | Menos visível; difícil para browsers/CDN/WAF; maior chance de erro em suporte | APIs internas entre serviços maduros, com SDK controlado e observabilidade preparada |
 
-Regra: mudança incompatível exige nova **versão**; mudança compatível usa **revision**. Não usar versionamento por query/header para esconder breaking change.
+Regra: mudança incompatível exige nova **versão**; mudança compatível usa **revision**. Não usar versionamento por query/header para ocultar uma mudança incompatível.
 
 ### 6.5 Produtos, catálogo e consumo
 
 - **Produtos** agrupam APIs e definem policies de acesso (quotas, rate limit, escopos OAuth, termos de uso).
-- **Anti-pattern proibido:** produto genérico **"All APIs"**, **"Unlimited"** ou equivalente em produção. Ele elimina ownership, blast radius, chargeback e governança de quota. Exceção só em sandbox temporário com data de expiração.
-- **Developer Portal** customizado para a corporação: branding, fluxo de onboarding self-service, gestão de subscriptions, exemplos, sandbox.
+- **Prática proibida:** produto genérico **"All APIs"**, **"Unlimited"** ou equivalente em produção. Ele impede delimitar responsabilidades, impacto de falhas, chargeback e governança de quota. Exceção só em sandbox temporário com data de expiração.
+- **Developer Portal** personalizado para a corporação: identidade visual, fluxo de adesão por autoatendimento, gestão de subscriptions, exemplos, sandbox.
 - **API Center** [10] como visão executiva e auditoria: inventário, classificações, owners, status, regulatório. **Ressalva regional:** se API Center não está disponível na região corporativa, hospedar em região secundária; conferir trimestralmente.
 - **Sandbox** segregado: ambiente onde devs externos/parceiros testam sem credenciais de produção.
 
@@ -394,11 +394,11 @@ Metadados mínimos por **API** (registrados no OpenAPI/API Center/intake):
 
 Metadados mínimos por **produto**: owner do produto, APIs incluídas, consumidores-alvo, termos de uso, quotas/rate limits, SLA/SLO, suporte, classificação máxima permitida, custo/showback, data de revisão.
 
-Quota não é só técnica; é por **jornada/consumidor**. Ex.: “consulta saldo parceiro A” pode ter 100 rpm e 1M/mês, enquanto “inicia pagamento parceiro A” tem 20 rpm, quota diária menor, mTLS obrigatório e aprovação manual. O gate de produto rejeita publicação sem quota/rate-limit explícitos por consumidor, produto ou claim.
+A quota deve considerar a **jornada e o consumidor**, além dos limites técnicos. Ex.: “consulta saldo parceiro A” pode ter 100 rpm e 1M/mês, enquanto “inicia pagamento parceiro A” tem 20 rpm, quota diária menor, mTLS obrigatório e aprovação manual. O gate de produto rejeita publicação sem quota/rate-limit explícitos por consumidor, produto ou claim.
 
 ### 6.6 Protocolos não-REST e AI gateway
 
-Além de REST/SOAP, APIM cobre outros protocolos. Cada um tem suporte distinto por SKU/região — confirmar antes de assumir.
+Além de REST/SOAP, APIM cobre outros protocolos. O suporte varia por SKU/região e deve ser confirmado antes da escolha.
 
 | Protocolo / capacidade | Suportado em | Limitações | Quando faz sentido |
 |---|---|---|---|
@@ -406,14 +406,14 @@ Além de REST/SOAP, APIM cobre outros protocolos. Cada um tem suporte distinto p
 | **GraphQL synthetic** | Todos os tiers APIM, com ressalvas [1] | Synthetic GraphQL não é suportado em workspaces; synthetic subscriptions estão em preview e não disponíveis no Consumption; resolvers HTTP/Cosmos DB/Azure SQL exigem governança própria | Criar schema GraphQL sobre APIs legadas sem reescrever backend |
 | **WebSocket APIs** | **Developer, Basic, Basic v2, Standard, Standard v2, Premium, Premium v2**; não Consumption [1] | Pass-through; policies só no `onHandshake`; conexões 1:1 não são distribuídas entre múltiplos backends; CORS/validate-content e várias policies não se aplicam ao handshake | Streaming client↔server, cotações, notificações persistentes |
 | **OData passthrough** | Premium clássico, v2² | Validação OData não nativa | APIs legadas SAP/Dynamics |
-| **gRPC** | Em rollout/limitado² | Verificar antes de comitar | APIs internas alta performance |
+| **gRPC** | Em implantação/limitado² | Verificar antes de assumir o compromisso | APIs internas de alto desempenho |
 | **AI gateway (token rate limit / semantic caching)** | GA em SKUs selecionados [12] | Custo cresce com tokens; semantic cache requer Azure Cache for Redis Enterprise | APIs que fazem fan-out para Azure OpenAI ou modelos próprios |
 | **MCP server gateway** | Preview/rollout [12] | Atenção a versão de protocolo e SDK | Ferramentas internas Copilot/agents corporativos |
 
-² Suporte por SKU/região varia por release; revalidação **trimestral** pelo time de plataforma (owner: lead de APIs) contra a matriz oficial [1][12]; última confirmação registrada em ADR-APIM-001.
+² Suporte por SKU/região varia por release; revalidação **trimestral** pela equipe de plataforma (responsável: líder de APIs) com base na matriz oficial [1][12]; última confirmação registrada em ADR-APIM-001.
 
 Controles específicos:
-- **GraphQL público/B2B**: `validate-graphql-request` com `max-size`, `max-depth`, bloqueio de introspection (`/__*`) quando aplicável, allowlist/denylist de paths sensíveis, quota por consumer e logs de query hash — não logar query completa com PII [18][31].
+- **GraphQL público/B2B**: `validate-graphql-request` com `max-size`, `max-depth`, bloqueio de introspection (`/__*`) quando aplicável, allowlist/denylist de paths sensíveis, quota por consumidor e logs de query hash; não registrar a query completa com PII [18][31].
 - **GraphQL pass-through vs synthetic**: pass-through preserva backend e reduz transformação; synthetic aumenta acoplamento ao APIM e exige testes de resolvers, cache e autorização de campo.
 - **Subscriptions GraphQL/WebSocket**: definir timeout, quota por conexão, quota por mensagem/evento, limite de conexões por consumer e runbook de desconexão.
 - **Query allowlist**: para APIs públicas/reguladas, preferir persisted queries/allowlist por hash quando o conjunto de queries é conhecido.
@@ -454,11 +454,11 @@ Modelos por classe (detalhado em §7.7):
 
 ### 7.3 APIM → backend
 
-APIM faz **autorização grossa** no perímetro: valida identidade, emissor, audience, escopos/roles/claims, produto/subscription, quota e políticas de acesso por API/operação. Isso reduz superfície e bloqueia chamadas obviamente inválidas, mas **não substitui autorização de negócio no backend**.
+APIM faz **autorização de escopo amplo** no perímetro: valida identidade, emissor, audience, escopos/roles/claims, produto/subscription, quota e políticas de acesso por API/operação. Isso reduz a superfície de exposição e bloqueia chamadas inválidas segundo esses controles, mas **não substitui a autorização de negócio no backend**.
 
 - **BOLA (Broken Object Level Authorization / OWASP API1)**: checar se o sujeito pode acessar aquele objeto específico (`accountId`, `customerId`, `consentId`) é responsabilidade do backend/sistema de domínio.
 - **BFLA (Broken Function Level Authorization / OWASP API5)**: APIM pode bloquear funções por scope/role, mas a decisão final de função/ação do domínio deve estar no backend.
-- **Autorização por campo/propriedade (OWASP API3)**: masking, allowlist de campos e validação de propriedade sensível pertencem ao backend; APIM pode complementar com schema validation e remoção de headers, não decidir regra de negócio fina.
+- **Autorização por campo/propriedade (OWASP API3)**: mascaramento, allowlist de campos e validação de propriedade sensível pertencem ao backend; APIM pode complementar com validação de schema e remoção de headers, mas não decidir regras de negócio específicas.
 
 Controles de comunicação APIM → backend:
 
@@ -497,12 +497,12 @@ Threat model deve ser produzido por classe (§7.7) e atualizado anualmente ou po
 | Repudiation | Falta de evidência de quem chamou | Audit log; correlation ID; assinatura de logs em Sentinel | API9 Improper Inventory Management |
 | Information Disclosure | Vazamento via erro/header/log/campo não autorizado | Erros padronizados; remoção de headers; políticas de log sem PII; validação de resposta quando aplicável | API3 Broken Object Property Level Authorization |
 | Denial of Service | Flood, abuse, query GraphQL profunda | rate-limit; quota; WAF; `validate-graphql-request`; throttling backend; circuit breaker em backend | API4 Unrestricted Resource Consumption |
-| Elevation of Privilege | Token mal validado, claim trustada cegamente, função admin exposta | Validação rígida (issuer, audience, scope, claims); deny-by-default; produtos separados por função | API5 Broken Function Level Authorization |
+| Elevation of Privilege | Token validado incorretamente, claim aceita sem verificação, função administrativa exposta | Validação rígida (issuer, audience, scope, claims); deny-by-default; produtos separados por função | API5 Broken Function Level Authorization |
 | (Adicional) | Acesso direto ao backend | Restrição de rede; allowlist IPs APIM no backend; mTLS APIM→backend | API8 Security Misconfiguration |
 | (Adicional) | Shadow API | Defender for APIs [25]; inventário API Center [10] | API9 Improper Inventory Management |
 | (Adicional) | Consumo inseguro de API externa | Timeout, validação de schema, allowlist de hosts, retry com limite | API10 Unsafe Consumption of APIs |
 
-> Correção OWASP 2023: **API3 é "Broken Object Property Level Authorization"**. O rótulo usado no Top 10 2019 para exposição excessiva de dados foi consolidado no risco de autorização por propriedade/objeto em 2023. APIM ajuda na borda; autorização de objeto/campo permanece no backend (§7.3).
+> No OWASP API Top 10 2023, **API3 é "Broken Object Property Level Authorization"**. O rótulo usado no Top 10 2019 para exposição excessiva de dados foi consolidado no risco de autorização por propriedade/objeto em 2023. APIM aplica controles no perímetro; a autorização de objeto/campo permanece no backend (§7.3).
 
 Saída: documento `threat-model-{classe}.md` por classe regulatória, anexado ao backlog do produto.
 
@@ -521,11 +521,11 @@ Saída: documento `threat-model-{classe}.md` por classe regulatória, anexado ao
 
 ### 7.8 Operacionalização de requisitos LGPD/BACEN em APIM
 
-Aterrissar regulação em controles APIM concretos:
+Os requisitos regulatórios correspondem aos seguintes controles APIM:
 
-| Requisito regulatório | Onde aterrissa em APIM | Como evidenciar |
+| Requisito regulatório | Controle ou processo no APIM | Como evidenciar |
 |---|---|---|
-| LGPD art. 7º (base legal) | Ficha de intake da API (§6.2) | Campo "base legal" preenchido; reviewer compliance assinou |
+| LGPD art. 7º (base legal) | Ficha de intake da API (§6.2) | Campo "base legal" preenchido; assinatura do revisor de compliance |
 | LGPD art. 18 (direitos do titular) | API "direitos do titular" publicada com SLO próprio | Inventário em API Center; SLA monitorado |
 | LGPD art. 46-47 (segurança) | Policies de criptografia, audit, mTLS quando aplicável | Azure Policy/Defender for Cloud + relatórios |
 | LGPD art. 48 (notificação de incidente) | Runbook §10.6 + integração SIEM (Sentinel) | Playbook de notificação ANPD dentro de prazo (Resolução CD/ANPD nº 15/2024) [27] |
@@ -542,25 +542,25 @@ Cada item deve ser auditável: link para evidência (issue, PR, runbook, certifi
 ### 8.1 Aderência à Azure Landing Zone
 
 - Subscrições padronizadas (Connectivity, Identity, Platform, Workloads).
-- **APIM não fica na Connectivity subscription por padrão.** Connectivity hospeda hub, Firewall/VWAN, DNS resolver, ExpressRoute/VPN e componentes compartilhados de rede. APIM é workload/plataforma de aplicação e deve nascer por **subscription vending** em uma subscrição dedicada de Platform-APIM ou na Workload subscription do domínio, com policies/tags/RBAC herdados [33].
+- **APIM não fica na Connectivity subscription por padrão.** Connectivity hospeda hub, Firewall/VWAN, DNS resolver, ExpressRoute/VPN e componentes compartilhados de rede. APIM é uma carga de trabalho ou plataforma de aplicação e deve ser provisionado por **subscription vending** em uma subscrição dedicada de Platform-APIM ou na Workload subscription do domínio, com policies/tags/RBAC herdados [33].
 - APIM corporativo nas subscrições de Platform; instâncias dedicadas nas Workloads do domínio. Exceção para colocar APIM no hub/Connectivity exige ADR aprovada por plataforma, segurança e rede, com justificativa de risco/blast radius.
 - Hub-spoke: hub com firewall central, ExpressRoute/VPN e DNS híbrido; APIM em spoke dedicado ou workload spoke conforme modelo de adoção.
 - Naming/tagging conforme padrão corporativo (§8.2).
 
-### 8.2 Naming, tagging e ownership
+### 8.2 Nomenclatura, tags e responsabilidades
 
 Exemplo de convenção:
 
-- `apim-{corp}-{env}-{regiao}-{seq}` — ex.: `apim-acme-prd-bs-01`.
+- `apim-{corp}-{env}-{regiao}-{seq}`; ex.: `apim-acme-prd-bs-01`.
 - Tags obrigatórias em recursos APIM, workspace gateway, WAF, Log Analytics/Event Hub e recursos correlatos: `owner`, `costcenter`, `costAllocation`, `domain`, `apiProductOwner`, `data-classification`, `regulatory-class` (§2.3), `slaTier`, `slo`, `exposure` (`internal|partner|public|admin`), `retentionClass`, `oncall`, `criticality`, `mpasMapId`, `env`.
 - Tags obrigatórias no nível de API/produto (API Center/OpenAPI/intake): `owner`, `apiProductOwner`, `supportContact`, `costAllocation`, `slaTier`, `exposure`, `retentionClass`, `regulatoryClass`, `mpasMapId`.
-- Ownership do recurso APIM corporativo: time de plataforma; ownership por API/produto: domínio produtor. O owner de produto aprova quota, consumer onboarding, deprecação e custo alocado.
+- Responsabilidade pelo recurso APIM corporativo: equipe de plataforma; por API/produto: domínio produtor. O responsável pelo produto aprova quota, adesão de consumidores, deprecação e custo alocado.
 
 ### 8.3 RBAC
 
 - **API Management Service Contributor** apenas para automação/plataforma.
 - **API Management Service Reader** para devs/squads (read-only).
-- **API Management Service Operator** quando squad precisa publicar via portal (raro — preferir pipeline).
+- **API Management Service Operator** quando a squad precisa publicar via portal (caso raro; preferir pipeline).
 - Custom roles para `policy-only-edit`, `read-logs-only`, `developer-portal-publisher`.
 
 ### 8.4 Azure Policy e guardrails
@@ -581,9 +581,9 @@ Matriz de responsabilidade dos guardrails:
 |---|---|---|---|
 | **Azure Policy** | Recurso Azure: SKU/região, tags, TLS mínimo, diagnostic settings, public network access, Private Endpoint, Defender, identidade gerenciada | Semântica de OpenAPI, quota por produto, `<base/>` em policy XML se não houver definição específica, regra de negócio | Deny APIM fora de regiões permitidas; DeployIfNotExists para diagnostic settings |
 | **Pipeline/IaC** | Contrato e configuração declarativa: OpenAPI, products, version sets, policies, fragments, backends, loggers, RBAC, budgets, alertas, breaking changes | Mudança emergencial feita no portal após deploy; comportamento runtime real | openapi-diff, secret scan, Bicep what-if/Terraform plan, policy lint |
-| **Runtime APIM/WAF** | Tráfego real: OAuth/mTLS, CORS, rate limit/quota, schema validation, WAF, logs, correlation ID | Provar ownership, corrigir contrato ruim, autorizar objeto/campo de domínio | Bloquear token inválido, limitar flood, rejeitar GraphQL depth excessivo |
+| **Runtime APIM/WAF** | Tráfego real: OAuth/mTLS, CORS, rate limit/quota, schema validation, WAF, logs, correlation ID | Comprovar responsabilidades, corrigir contrato inadequado, autorizar objeto/campo de domínio | Bloquear token inválido, limitar flood, rejeitar profundidade excessiva em GraphQL |
 
-Rollout de Azure Policy:
+Implantação de Azure Policy:
 
 1. **Audit** por 2–4 semanas para medir impacto e falsos positivos.
 2. **Modify** quando o valor é seguro de corrigir automaticamente (tags padrão, diagnostic settings) e há managed identity de remediation.
@@ -596,8 +596,8 @@ Toda mudança Audit→Deny/Modify/DeployIfNotExists exige changelog, owner, jane
 
 - **APIM Premium clássico VNet interna** para APIs internas; **VNet externa** quando exposta e justificada.
 - **Front Door/Application Gateway com WAF** sempre antes do APIM para tráfego externo.
-  - **Front Door + WAF**: default para entrada global, multi-region, CDN/cache/edge, aceleração, failover global e proteção no perímetro Microsoft [33].
-  - **Application Gateway WAF v2**: default para entrada regional, APIM interno, VNet/L7, roteamento por path/host, Private Link/backend privado e integração com NSG/UDR [15][33].
+  - **Front Door + WAF**: padrão para entrada global, multi-region, CDN/cache/edge, aceleração, failover global e proteção no perímetro Microsoft [33].
+  - **Application Gateway WAF v2**: padrão para entrada regional, APIM interno, VNet/L7, roteamento por path/host, Private Link/backend privado e integração com NSG/UDR [15][33].
   - **Front Door + App Gateway**: usar quando precisa edge global e perímetro regional privado. Documentar TLS end-to-end, headers (`X-Forwarded-*`), probes e origem privada.
 - **DNS privado** para resolução interna; **DNS corporativo** para externo.
 - **Certificados**: gerenciados no Key Vault, com rotação automática.
@@ -617,28 +617,28 @@ DNS híbrido obrigatório:
 - On-prem deve resolver FQDNs privados de APIM/backends sem hairpin para internet.
 - Validar split-horizon (`api.empresa.com` externo vs interno) em runbook antes do go-live.
 
-### 8.6 FinOps de APIM (sizing, custo, showback/chargeback)
+### 8.6 FinOps de APIM (dimensionamento, custo, showback/chargeback)
 
-Custo de APIM não vem apenas da licença do SKU. Vem de quatro grandes drivers:
+O custo de APIM inclui a licença do SKU e os serviços associados. Quatro componentes principais devem ser considerados:
 
-1. **APIM unit/SKU** — Premium clássico tem custo por unit/região (multi-region = unit × regiões). Tiers v2 têm custo por unit/escala, chamadas incluídas/excedentes e, quando aplicável, secondary units.
-2. **Observabilidade** — Log Analytics ingestion + retention. Em volume alto, custo de log pode superar o APIM. Política tiered de retenção (hot 30d / warm 90d / archive 1+ ano), table plans (Analytics/Basic/Auxiliary) e amostragem de logs não-críticos podem reduzir 40-70 % [18][31].
-3. **Componentes de borda e segurança** — Front Door, Application Gateway, WAF, Defender for APIs. Defender for APIs cobra por API monitorada.
-4. **Tráfego de saída e Private Link** — egress regional; Private Link endpoint hourly + por dado processado; Event Hub/SIEM quando logs são enviados para auditoria em tempo real.
+1. **APIM unit/SKU**: Premium clássico tem custo por unit/região (multi-region = unit × regiões). Tiers v2 têm custo por unit/escala, chamadas incluídas/excedentes e, quando aplicável, secondary units.
+2. **Observabilidade**: ingestão e retenção no Log Analytics. Em volume alto, o custo de logs pode superar o APIM. Política de retenção em camadas (hot 30d / warm 90d / archive 1+ ano), table plans (Analytics/Basic/Auxiliary) e amostragem de logs não críticos podem reduzir 40-70 % [18][31].
+3. **Componentes de borda e segurança**: Front Door, Application Gateway, WAF, Defender for APIs. Defender for APIs cobra por API monitorada.
+4. **Tráfego de saída e Private Link**: saída regional; cobrança de Private Link por hora de endpoint e por dado processado; Event Hub/SIEM quando logs são enviados para auditoria em tempo real.
 
-#### 8.6.1 Sizing inicial
+#### 8.6.1 Dimensionamento inicial
 
-- Não use número fixo de TPS por unit como premissa de sizing ou orçamento. Throughput publicado ou citado é informativo, não é SLA e não deve ser usado para capacity/budget planning.
+- Não use número fixo de TPS por unit como premissa de dimensionamento ou orçamento. Throughput publicado ou citado é informativo, não é SLA e não deve ser usado para planejamento de capacidade ou orçamento.
 - Dimensione a partir do perfil real esperado: pico de requisições, concorrência, tamanho de payload, latência do backend, reutilização de conexões, TLS, número e custo das policies, cache, transformação, validação JWT/mTLS e logs.
-- **Teste de carga representativo é obrigatório** antes de comprometer FinOps/produto. O teste deve refletir payloads, policies, backends, observabilidade e p95/p99 esperados em produção.
-- Para operação e autoscale, use métricas sustentadas de capacidade/CPU/memória, latência, erros e saturação por período prolongado; não tome decisão por spike curto.
+- **Teste de carga representativo é obrigatório** antes de assumir compromissos com FinOps/produto. O teste deve refletir payloads, policies, backends, observabilidade e p95/p99 esperados em produção.
+- Para operação e autoscale, use métricas sustentadas de capacidade/CPU/memória, latência, erros e saturação por período prolongado; não tome decisão com base em um pico breve.
 - Multi-region, unidades adicionais, calls v2, workspace gateways/packs e self-hosted gateways aumentam custo conforme meter aplicável por SKU/região. Revalidar preços no Azure Pricing Calculator [30].
 
 #### 8.6.2 Tabela "componente × custo unitário típico" (referência)
 
 Valores de lista consultados na Azure Retail Prices API para `API Management` em `brazilsouth`, acesso em **2026-06-18**. Cálculo mensal usa **730 h/mês**. Preços em USD, sem desconto, MACC, EA, impostos ou câmbio; **revalidar no Azure Pricing Calculator [30]** e na página de preços antes de aprovar orçamento.
 
-| Componente / meter | Região | Unidade de cobrança | Preço lista | ≈ USD/mês | Driver / observação |
+| Componente / meter | Região | Unidade de cobrança | Preço de lista | ≈ USD/mês | Fator de custo / observação |
 |---|---:|---:|---:|---:|---|
 | APIM Basic v2 Unit | Brazil South | unit-hora | US$0.20548/h | US$150 | Custo base por unit |
 | APIM Basic v2 Calls | Brazil South | 10K chamadas | tier incluído; depois ~US$0.03/10K | variável | Meter de chamadas v2; depende do volume excedente |
@@ -660,14 +660,14 @@ Valores de lista consultados na Azure Retail Prices API para `API Management` em
 | Private Link endpoint | região do endpoint | endpoint-hora + GB processado | variável | variável | Número de endpoints e dados processados |
 | Egress regional | região de saída | GB de saída | variável | variável | Brazil South em zona de cobrança de bandwidth; otimizar com cache/compressão |
 
-> Não use esta tabela como cotação. Use como baseline FinOps para identificar drivers dominantes. Cotação real deve ser revalidada por FinOps/procurement no Azure Pricing Calculator [30] e na subscrição do cliente.
+> Esta tabela é uma referência para identificar os principais fatores de custo, não uma cotação. A cotação deve ser revalidada por FinOps/compras no Azure Pricing Calculator [30] e na subscrição do cliente.
 
 #### 8.6.3 Tagging e showback/chargeback
 
 - Cada API e produto carrega tags `costcenter`, `costAllocation`, `domain`, `apiProductOwner`, `slaTier`, `exposure`, `retentionClass` e `mpasMapId` (§8.2).
 - Log Analytics workspace estruturado por categoria (gateway logs vs audit) permite atribuir consumo de log por domínio/API/produto.
 - Relatório mensal de **showback** por domínio (consumo, requests, custo aproximado por componente) e **chargeback** quando a maturidade permitir.
-- Defender for APIs custos podem ser segmentados por quantidade de APIs monitoradas e tag do produto/API.
+- Os custos de Defender for APIs podem ser segmentados por quantidade de APIs monitoradas e tag do produto/API.
 
 Fórmula objetiva de rateio mensal por API/produto:
 
@@ -690,9 +690,9 @@ Pesos sugeridos de SLA para rateio compartilhado: Bronze=1, Silver=2, Gold=4, Re
 #### 8.6.5 Otimizações comuns
 
 - **Cache de policies** (cache-store/cache-lookup) reduz CPU e latência.
-- **Compression** (gzip) reduz egress.
-- **Sampling de logs** para classes não reguladas.
-- **Retenção tiered** (hot/warm/archive) e table plans adequados.
+- **Compressão** (gzip) reduz o tráfego de saída.
+- **Amostragem de logs** para classes não reguladas.
+- **Retenção em camadas** (hot/warm/archive) e table plans adequados.
 - **Reserved capacity/commitment tiers** quando o consumo for previsível.
 
 #### 8.6.6 Estratégia de ambientes não-produtivos
@@ -710,14 +710,14 @@ Pesos sugeridos de SLA para rateio compartilhado: Bronze=1, Silver=2, Gold=4, Re
 ### 9.1 Princípios
 
 - **Infraestrutura como código (IaC)** obrigatória. Bicep ou Terraform.
-- **Tudo como código**: instâncias APIM, workspaces/workspace gateways, APIs, operations, schemas, **version sets**, **products**, groups/subscriptions, policy fragments, policies XML, backends, certificates references, loggers, diagnostics, alerts/action groups, RBAC, budgets, named values e Key Vault references.
-- **Named values sem secrets em repositório**: valores sensíveis ficam no Key Vault; o IaC referencia Key Vault/managed identity. Secret literal em YAML/Bicep/policy/OpenAPI bloqueia PR.
+- **Configuração como código**: instâncias APIM, workspaces/workspace gateways, APIs, operations, schemas, **version sets**, **products**, groups/subscriptions, policy fragments, policies XML, backends, referências a certificados, loggers, diagnostics, alerts/action groups, RBAC, budgets, named values e referências ao Key Vault.
+- **Named values sem segredos no repositório**: valores sensíveis ficam no Key Vault; o IaC referencia Key Vault/managed identity. Segredo literal em YAML/Bicep/policy/OpenAPI bloqueia o PR.
 - **Policies em XML versionado** em repositório, com fragmentos reutilizáveis e `<base/>` obrigatório quando herda controles globais/workspace/produto.
 - **OpenAPI versionado** como contrato; GraphQL schema versionado quando aplicável.
 - **Build determinístico**, ambientes idempotentes.
 - **GitOps**: PR → revisão → merge → deploy automático.
 - **Trunk-based development** + feature flags em vez de branches longas.
-- **Não-prod econômico**: DEV/UAT com SKU/scale/retention reduzidos, dados sintéticos, teardown/scale-down quando possível e budgets próprios (§8.6.6).
+- **Controle de custos em não produção**: DEV/UAT com SKU, escala e retenção reduzidos, dados sintéticos, remoção de recursos ou redução de escala quando possível e orçamentos próprios (§8.6.6).
 
 ### 9.2 Fluxo alvo
 
@@ -734,7 +734,7 @@ Pesos sugeridos de SLA para rateio compartilhado: Bronze=1, Silver=2, Gold=4, Re
    ↓
 [release] → PROD com aprovação humana + janela definida
    ↓
-[verify] → smoke prod + observabilidade verde por N horas
+[verify] → smoke prod + indicadores dentro dos limites por N horas
 ```
 
 ### 9.3 Validações obrigatórias em PR/pipeline
@@ -758,21 +758,21 @@ Pesos sugeridos de SLA para rateio compartilhado: Bronze=1, Silver=2, Gold=4, Re
 
 #### 9.4.1 Drift detection
 
-Drift acontece — uma policy ajustada no portal em incidente, uma config mudada na crise. A plataforma precisa detectar e reconciliar.
+Alterações de policy ou configuração feitas no portal durante incidentes podem gerar divergência em relação ao IaC (drift). A equipe de plataforma precisa detectar e reconciliar essas divergências.
 
-Ferramentas concretas (referência [13][14]):
+Ferramentas de referência [13][14]:
 
-- **Azure APIOps Toolkit** (ferramenta open-source apoiada por Microsoft): extrai configuração da instância e compara com repositório (drift report) [13].
+- **Azure APIOps Toolkit** (ferramenta de código aberto apoiada pela Microsoft): extrai a configuração da instância e compara com o repositório (relatório de drift) [13].
 - **`az deployment what-if`** ou **Terraform `plan`**: comparam template vs estado.
 - **Bicep what-if** + **ARM what-if API**: para Bicep declarativo.
 - **Pulumi/Terragrunt** para quem usa esses gestores.
-- **Schedule de drift check** (GitHub Action / Azure Pipeline) diário ou semanal; resultado posta em canal de plataforma.
+- **Verificação agendada de drift** (GitHub Action / Azure Pipeline), diária ou semanal, com resultado publicado no canal da equipe de plataforma.
 
 Política: drift identificado **não é resolvido manualmente**; é replicado para o IaC (se a mudança é desejada) ou revertido (se não é). Cada drift gera issue.
 
 #### 9.4.2 Exceções
 
-Ver §11.5 — modelo formal com ciclo de vida.
+Ver §11.5: modelo formal com ciclo de vida.
 
 #### 9.4.3 Rollback
 
@@ -791,21 +791,21 @@ Para corporações com várias instâncias APIM (modelo C), padronizar:
 
 Duas estratégias comuns:
 
-- **Monorepo** — um único repositório para todas as instâncias, organizado por pasta `/instances/{instancia}/...`. Vantagem: compartilhamento de policy fragments fácil. Desvantagem: CI/CD mais complexo, blast radius de PR maior.
-- **Polirepo** — um repositório por instância + um repositório `apim-shared` com fragmentos. Vantagem: ownership claro. Desvantagem: sincronização exige tooling.
+- **Monorepo**: um único repositório para todas as instâncias, organizado por pasta `/instances/{instancia}/...`. Vantagem: facilita o compartilhamento de policy fragments. Desvantagem: CI/CD mais complexo e maior abrangência do impacto de um PR.
+- **Polirepo**: um repositório por instância + um repositório `apim-shared` com fragmentos. Vantagem: responsabilidades claras. Desvantagem: sincronização exige ferramentas específicas.
 
-Recomendação: para 2-4 instâncias, monorepo com pipelines paralelos por instância. Para 5+, polirepo + repo central de shared.
+Recomendação: para 2-4 instâncias, monorepo com pipelines paralelos por instância. Para 5+, polirepo + repositório central de componentes compartilhados.
 
 #### 9.5.2 Sincronização de policy fragments
 
 - Fragmentos comuns (JWT validation corporativa, correlation ID, cors padrão) ficam em `apim-shared`.
 - Publicação via release tag; instâncias consomem por versão (`apim-shared@v1.4.2`).
-- Mudança quebrada exige bump de major e plano de migração.
+- Mudança incompatível exige incremento da versão major e plano de migração.
 
 #### 9.5.3 Drift entre instâncias
 
-- Drift report comparando instâncias com fragmentos compartilhados — divergências geram issue.
-- Política: nenhuma instância pode ficar mais de 60 dias atrás da versão major mais recente do shared.
+- Relatório de drift compara instâncias com fragmentos compartilhados; divergências geram issue.
+- Política: nenhuma instância pode permanecer por mais de 60 dias sem adotar a versão major mais recente dos componentes compartilhados.
 
 #### 9.5.4 Catálogo unificado
 
@@ -823,16 +823,16 @@ Métricas mínimas por API (publicadas em dashboard/workbook):
 - Latência gateway-only e end-to-end (p50, p95, p99).
 - Taxa de erro separando **gateway** e **backend**: HTTP 4xx, 5xx, `GatewayResponseCodeCategory`, `BackendResponseCodeCategory`.
 - Throughput/RPS por API, operação, produto, subscription e região.
-- Backend latency (`BackendDuration`) e overall gateway duration (`Duration`).
-- Token validation latency e falhas de validação (OAuth/OIDC/FAPI) quando aplicável.
+- Latência do backend (`BackendDuration`) e duração total no gateway (`Duration`).
+- Latência e falhas de validação de tokens (OAuth/OIDC/FAPI) quando aplicável.
 - Cache hit/miss e uso de quota/rate-limit quando aplicável.
 
-Sinais de capacidade por modelo de execução — **não misturar no mesmo alerta**:
+Sinais de capacidade por modelo de execução; **não misturar no mesmo alerta**:
 
 | Modelo APIM | Métrica oficial | Uso recomendado |
 |---|---|---|
 | **Tiers clássicos** (Developer/Basic/Standard/Premium) | `Capacity` / **Capacity** | Tendência de saturação da instância clássica; média para escala e investigação de picos persistentes [6][36]. |
-| **Tiers v2** (Basic v2/Standard v2/Premium v2) | `CpuPercent_Gateway` / **CPU Percentage of Gateway** e `MemoryPercent_Gateway` / **Memory Percentage of Gateway** | Escala/troubleshooting por CPU e memória do gateway v2; substituir o raciocínio antigo de Capacity [6][36]. |
+| **Tiers v2** (Basic v2/Standard v2/Premium v2) | `CpuPercent_Gateway` / **CPU Percentage of Gateway** e `MemoryPercent_Gateway` / **Memory Percentage of Gateway** | Escala e diagnóstico por CPU e memória do gateway v2, em vez de Capacity [6][36]. |
 | **Workspace gateway** (`Microsoft.ApiManagement/gateways`) | `CpuPercent_Gateway` / **CPU Utilization (%)** e `MemoryPercent_Gateway` / **Memory Utilization (%)** | Capacidade por gateway de workspace; acompanhar isolamento de runtime e noisy neighbor [6][36]. |
 
 Sinais adicionais obrigatórios:
@@ -846,7 +846,7 @@ Logs mínimos:
 
 - Gateway logs sem corpo/header sensível por padrão; nunca registrar `Authorization`, refresh token, secret, chave de subscription ou payload pessoal sem base legal explícita.
 - Audit/activity logs de plano de controle e Developer Portal.
-- Diagnostic settings versionados em IaC; mudança manual vira incidente de governança.
+- Diagnostic settings versionados em IaC; mudança manual deve ser tratada como incidente de governança.
 
 ### 10.2 Logs, métricas e alertas
 
@@ -884,11 +884,11 @@ Application Insights por API é opcional e deve ser do tipo workspace-based, com
 
 #### 10.2.3 Gate de residência regional da observabilidade
 
-Antes de habilitar APIM, workspace gateway, API Center, Application Insights, Event Hub, Sentinel ou destino de diagnostic settings, a ficha da API deve executar o gate abaixo e anexar a decisão ao ADR (§3.4 e Apêndice C):
+Antes de habilitar APIM, workspace gateway, API Center, Application Insights, Event Hub, Sentinel ou destino de diagnostic settings, aplicar o gate abaixo na avaliação da API e anexar a decisão ao ADR (§3.4 e Apêndice C):
 
 | Recurso de telemetria/catálogo | Decisão exigida | Evidência mínima |
 |---|---|---|
-| **Log Analytics workspace** | Região por classe de dado; separar workspaces se residência, ownership, retenção ou Sentinel exigirem fronteira própria | ADR com região, classe (§7.7), owner, retenção por tabela; justificativa se fora de Brasil [38][40]. |
+| **Log Analytics workspace** | Região por classe de dado; separar workspaces se residência, responsabilidades, retenção ou Sentinel exigirem separação | ADR com região, classe (§7.7), responsável, retenção por tabela; justificativa se fora do Brasil [38][40]. |
 | **Application Insights workspace-based** | Mesma geografia/região da aplicação/APIM quando houver requisito de residência; revisar coleta de IP/URLs/custom telemetry | ADR + aprovação DPO/data owner; processor para mascarar PII quando necessário [32][43]. |
 | **Event Hub para logs/auditoria** | Namespace na mesma região do recurso regional quando usado por diagnostic settings; avaliar geo-DR sabendo que metadata DR não replica eventos | ADR + owner do consumidor do stream + plano de retenção/capture [37][44]. |
 | **Microsoft Sentinel** | Sentinel herda o Log Analytics workspace; workspace dedicado quando SOC/compliance exigir segregação | Aprovação SOC/DPO; retenção mínima 90 dias para Sentinel e política de archive se necessário [40][42]. |
@@ -899,7 +899,7 @@ Regra de aprovação: API **regulada**, **LGPD sensível**, **Open Finance**, **
 
 ### 10.3 Dashboards
 
-Dependência operacional: **Azure Monitor Workbooks** e dashboard Azure Monitor-based do APIM, não analytics clássico. O analytics clássico/built-in dos tiers clássicos será aposentado em **15/03/2027**; até lá, manter paralelo apenas para comparação e migrar consultas, alertas e reports para Log Analytics/Workbooks [11][31][53].
+A operação deve usar **Azure Monitor Workbooks** e o dashboard do APIM baseado no Azure Monitor, não o analytics clássico. O analytics clássico integrado aos tiers clássicos será aposentado em **15/03/2027**; até lá, mantê-lo em paralelo apenas para comparação e migrar consultas, alertas e relatórios para Log Analytics/Workbooks [11][31][53].
 
 Mínimo por instância APIM:
 
@@ -914,7 +914,7 @@ Plano de migração do analytics clássico:
 
 | Data limite | Entrega | Owner |
 |---|---|---|
-| D+30 após aprovação do guia | Inventário de usuários/reports que ainda usam Analytics (classic) | Plataforma + DevEx |
+| D+30 após aprovação do guia | Inventário de usuários/relatórios que ainda usam Analytics (classic) | Plataforma + DevEx |
 | D+60 | Workbooks equivalentes publicados e validados com owners | Plataforma + Observabilidade |
 | D+90 | Alertas migrados para métricas/KQL oficiais; classic só read-only | Plataforma + SOC |
 | Até 2027-01-15 | Comunicação final e treinamento; dashboard clássico removido de rotinas | DevEx |
@@ -922,15 +922,15 @@ Plano de migração do analytics clássico:
 
 ### 10.4 SLO, SLA e capacidade
 
-- **SLO** definido pelo owner do produto, validado pela plataforma. Ex.: 99,9 % availability, p99 < 500 ms.
-- **SLA** ao consumidor externo só após SLO maduro (3 meses verde).
-- **Error budget** consumido publicamente; freeze de mudança quando budget esgota.
-- **Capacity planning** trimestral; teste de carga obrigatório a cada SKU upgrade/downgrade.
+- **SLO** definido pelo responsável pelo produto, validado pela plataforma. Ex.: 99,9 % de disponibilidade, p99 < 500 ms.
+- **SLA** ao consumidor externo só após cumprimento do SLO por 3 meses.
+- **Error budget** com consumo divulgado publicamente; suspensão de mudanças quando o orçamento se esgota.
+- **Planejamento de capacidade** trimestral; teste de carga obrigatório a cada upgrade/downgrade de SKU.
 - Alerta de escala deve usar o sinal correto do runtime: Capacity para clássico; CPU/memória para v2 e workspace gateway (§10.1).
 
 #### 10.4.1 SLO numérico de referência por classe
 
-Valores indicativos para ancorar discussão com owners; cada API valida no contexto:
+Valores indicativos para discussão com os responsáveis; validar no contexto de cada API:
 
 | Classe (§7.7) | Availability | Latência p99 (gateway-only) | Error budget mensal |
 |---|---|---|---|
@@ -947,80 +947,80 @@ Latência p99 acima refere-se ao tempo gateway (excluindo backend); SLO ao consu
 
 | Criticidade | SKU base recomendado | HA dentro de região | DR (multi-region) | RTO | RPO | Runbook |
 |---|---|---|---|---|---|---|
-| **Crítica regulada (Open Finance, pagamentos)** | Premium clássico | Sim — AZs (zone-redundant) | Sim, ativo-ativo entre regiões (nativo) | < 5 min | ~0 | Runbook DR ensaiado anualmente |
-| **Alta (negócio essencial)** | Premium clássico ou Premium v2 (onde houver) | Sim — AZs (Premium / Premium v2) | Premium clássico: ativo-passivo entre regiões. Premium v2: **sem multi-region nativo** — usar IaC + 2ª instância | < 30 min | < 5 min | Runbook DR ensaiado semestralmente |
+| **Crítica regulada (Open Finance, pagamentos)** | Premium clássico | Sim, AZs (zone-redundant) | Sim, ativo-ativo entre regiões (nativo) | < 5 min | ~0 | Runbook DR ensaiado anualmente |
+| **Alta (negócio essencial)** | Premium clássico ou Premium v2 (onde houver) | Sim, AZs (Premium / Premium v2) | Premium clássico: ativo-passivo entre regiões. Premium v2: **sem multi-region nativo**; usar IaC + 2ª instância | < 30 min | < 5 min | Runbook DR ensaiado semestralmente |
 | **Média (negócio importante)** | Standard v2 | **Não suporta AZ** (redundância por múltiplas unidades, sem zona) | **Sem backup/restore nativo**; DR por IaC + recriação | < 4 h | < 1 h | Runbook DR documentado, ensaio anual |
-| **Baixa (interno auxiliar)** | Basic v2 ou Standard v2 | **Não suporta AZ** | DR por IaC recreate | < 24 h | < 24 h | IaC + smoke test |
-| **Sandbox/Dev** | Developer | Não | Não | — | — | — |
+| **Baixa (interno auxiliar)** | Basic v2 ou Standard v2 | **Não suporta AZ** | DR por recriação via IaC | < 24 h | < 24 h | IaC + smoke test |
+| **Sandbox/Dev** | Developer | Não | Não | Não se aplica | Não se aplica | Não se aplica |
 
 Observações:
 - **Availability Zones: apenas Premium clássico e Premium v2.** Basic v2 e Standard v2 **não** suportam AZ [1]. Confirmar disponibilidade de zonas na região (Brazil South suporta para os tiers elegíveis; Brazil Southeast verificar).
 - Premium v2 hoje **não cobre multi-region ativo-ativo**; para crítica regulada, Premium clássico é mandatório [1].
-- **Backup/restore: disponível nos tiers clássicos** (Developer/Basic/Standard/Premium); **não disponível nos tiers v2** — nestes, DR depende de IaC + recriação.
+- **Backup/restore: disponível nos tiers clássicos** (Developer/Basic/Standard/Premium); **não disponível nos tiers v2**, nos quais DR depende de IaC + recriação.
 - Multi-region cross-border: avaliar se a regulação permite (LGPD/BACEN podem exigir residência); se logs/telemetria cruzam região, aplicar gate §10.2.3.
 
 ### 10.6 Runbooks/playbooks operacionais mínimos
 
 Cinco runbooks obrigatórios, mantidos no repositório de operação, ensaiados periodicamente:
 
-1. **Surge de 5xx em uma API** — passos: dashboard → identifica backend → circuit breaker → comunicar consumidores → escalar para owner da API e on-call backend.
-2. **Backend indisponível total** — passos: confirmar via alerta + dashboard → ativar fallback (se houver) → comunicar → status page → coordenação com owner backend.
-3. **Certificado próximo de expirar / expirado** — passos: alerta D-30 e D-7 → rotação no Key Vault → validação em dev → janela de troca produção → validação. Para FAPI/Open Finance: coordenar com cadeia ICP.
-4. **Rotação de chave / segredo (incidente ou agendada)** — passos: gerar nova chave no Key Vault → atualizar policies → comunicar consumidores impactados → revogar antiga após carência. Incidente: comprimir prazo, gerar relatório de evidência.
-5. **DR failover (regional outage)** — passos: confirmar outage Azure → ativar região secundária → atualizar DNS/Front Door → validar tráfego → comunicar status page → no retorno, drenar de volta de forma controlada. Ensaiado conforme criticidade (§10.5) e alinhado com evidência de rollback/teste definida em §9.
+1. **Aumento de erros 5xx em uma API**: consultar dashboard → identificar backend → acionar circuit breaker → comunicar consumidores → escalar para o responsável pela API e o plantão do backend.
+2. **Indisponibilidade total do backend**: confirmar via alerta + dashboard → ativar fallback (se houver) → comunicar → atualizar página de status → coordenar com o responsável pelo backend.
+3. **Certificado próximo de expirar / expirado**: alerta D-30 e D-7 → rotação no Key Vault → validação em DEV → janela de troca em produção → validação. Para FAPI/Open Finance: coordenar com a cadeia ICP.
+4. **Rotação de chave / segredo (incidente ou agendada)**: gerar nova chave no Key Vault → atualizar policies → comunicar consumidores impactados → revogar a antiga após carência. Em incidente: reduzir o prazo e gerar relatório de evidência.
+5. **Failover de DR (indisponibilidade regional)**: confirmar indisponibilidade Azure → ativar região secundária → atualizar DNS/Front Door → validar tráfego → comunicar na página de status → no retorno, transferir o tráfego de volta de forma controlada. Ensaiado conforme criticidade (§10.5) e alinhado com a evidência de rollback/teste definida em §9.
 
 Adicionais recomendados:
-6. **Incidente de segurança (LGPD)** — fluxo de comunicação ao DPO e ANPD em prazos (Resolução CD/ANPD nº 15/2024) [27].
-7. **Incidente de cibersegurança (BACEN)** — comunicação a BACEN conforme Resolução CMN nº 4.893/2021 [28c].
-8. **Reporte mensal FinOps** — fechamento de custo por componente, alocação por domínio.
-9. **Falha/ausência de telemetria** — diagnostic settings, ingestion, Event Hub, workspace, sampling e RBAC; classificar como incidente se API crítica ficar sem logs.
-10. **Drift/mudança manual em PROD** — congelar mudanças, exportar AzureActivity, reconciliar IaC, abrir RCA e evidência para auditoria.
+6. **Incidente de segurança (LGPD)**: fluxo de comunicação ao DPO e à ANPD nos prazos definidos (Resolução CD/ANPD nº 15/2024) [27].
+7. **Incidente de cibersegurança (BACEN)**: comunicação ao BACEN conforme Resolução CMN nº 4.893/2021 [28c].
+8. **Relatório mensal FinOps**: fechamento de custo por componente e alocação por domínio.
+9. **Falha/ausência de telemetria**: verificar diagnostic settings, ingestão, Event Hub, workspace, amostragem e RBAC; classificar como incidente se API crítica ficar sem logs.
+10. **Drift/mudança manual em PROD**: suspender mudanças, exportar AzureActivity, reconciliar IaC, abrir RCA e registrar evidência para auditoria.
 
 Cada runbook tem owner, frequência de ensaio, critério de sucesso e data do último ensaio.
 
 ### 10.7 Retenção, finalidade e imutabilidade de auditoria
 
-Retenção não é "guardar tudo para sempre". Cada tabela/destino deve ter finalidade, base legal/contratual, owner e prazo. Referência inicial, ajustável pelo DPO/jurídico:
+A retenção deve ser definida por tabela ou destino, com finalidade, base legal/contratual, responsável e prazo. Referência inicial, ajustável pelo DPO/jurídico:
 
-| Dado/log | Finalidade | Base/driver | Retenção mínima sugerida | Imutabilidade |
+| Dado/log | Finalidade | Base ou requisito | Retenção mínima sugerida | Imutabilidade |
 |---|---|---|---|---|
 | `ApiManagementGatewayLogs` operacional | Troubleshooting, SLO, capacity, suporte | Interesse legítimo/contrato/SLO | 30–90 dias hot; até 180 dias para APIs externas | Não, salvo incidente. |
 | Gateway logs de API regulada | Evidência de transação, disputa, auditoria regulatória | BACEN/Open Finance/contrato | 1–5 anos conforme norma/contrato | Sim para extrato/auditoria crítica em Storage WORM. |
-| `AzureActivity` e mudanças APIM/IaC | Auditoria de change, SoD, investigação | Controles internos, ISO/NIST/COBIT/COSO | 1–7 anos conforme GRC | Sim para PROD crítica e trilha de mudança. |
+| `AzureActivity` e mudanças APIM/IaC | Auditoria de mudanças, SoD, investigação | Controles internos, ISO/NIST/COBIT/COSO | 1–7 anos conforme GRC | Sim para PROD crítica e trilha de mudança. |
 | Developer Portal audit | Acesso de consumidor, solicitação/teste de API | Contrato, segurança, suporte | 180 dias–2 anos | Opcional; obrigatório em APIs reguladas. |
 | Application Insights traces/dependencies | Diagnóstico da aplicação produtora | Operação/SLO | 30–90 dias; maior só com justificativa | Não por padrão; evitar PII. |
 | Sentinel/security alerts | Detecção/resposta a incidentes | Segurança/cyber/regulatório | ≥ 90 dias hot; archive conforme SOC | WORM quando evidência legal/regulatória. |
-| Exports de auditoria e evidências de RCA | Prova de controle, investigação, litígio | Auditoria/jurídico | Conforme política GRC/litigation hold | Sim: policy locked ou legal hold. |
+| Exportações de auditoria e evidências de RCA | Prova de controle, investigação, litígio | Auditoria/jurídico | Conforme política GRC/litigation hold | Sim: policy locked ou legal hold. |
 
-Para auditoria crítica, enviar cópia para Azure Storage com **immutability policy/WORM** (time-based retention locked ou legal hold). A política precisa ser testada antes de bloquear, pois depois de locked não pode ser reduzida/removida dentro do período [39]. Log Analytics mantém analytics/long-term retention até 12 anos, mas WORM é a camada de não alteração quando a evidência precisa ser não apagável/não modificável [38][39].
+Para auditoria crítica, enviar cópia para Azure Storage com **immutability policy/WORM** (time-based retention locked ou legal hold). A política precisa ser testada antes do bloqueio, pois, após entrar no estado locked, não pode ser reduzida/removida dentro do período [39]. Log Analytics mantém analytics/long-term retention até 12 anos, mas WORM garante a imutabilidade quando a evidência não pode ser apagada nem modificada [38][39].
 
 ---
 
-## 11. Governança corporativa, ownership e experiência do desenvolvedor
+## 11. Governança corporativa, responsabilidades e experiência do desenvolvedor
 
 ### 11.1 Princípios de governança
 
 - **Governança via guardrails técnicos**: Azure Policy, gates de pipeline, lint, validação de classe. Documento/wiki como complemento, nunca como controle único.
-- **Ownership inquestionável**: cada API tem owner nominal (squad), técnico (lead), DPO/compliance quando regulado, on-call definido.
+- **Responsabilidades explícitas**: cada API tem responsável nominal (squad), responsável técnico (lead), DPO/compliance quando regulada e plantão definido.
 - **Decisão registrada em ADR**: modelos, SKUs, regiões, exceções.
 - **Catálogo único** (API Center [10]) como visão executiva.
-- **Caminho rápido para o comum**, caminho aprovado para o excepcional (§11.6).
+- **Autoatendimento para mudanças padronizadas**, aprovação específica para exceções (§11.6).
 
-### 11.2 Ownership mínimo
+### 11.2 Responsabilidades mínimas
 
-Cada API publicada precisa, na ficha (§6.2), com owner nominal e grupo substituto:
+Cada API publicada precisa registrar na ficha (§6.2) os papéis abaixo, com responsável nominal e grupo substituto:
 
-- **API/Product owner** (squad produtor): accountable por valor, SLO, backlog e comunicação de mudança.
-- **Tech lead produtor**: accountable técnico pela implementação e compatibilidade OpenAPI/policies da API.
+- **API/Product owner** (squad produtora): responsável final por valor, SLO, backlog e comunicação de mudança.
+- **Tech lead produtor**: responsável técnico final pela implementação e compatibilidade OpenAPI/policies da API.
 - **Consumer owner**: responsável pelo sistema consumidor principal/parceiro; recebe mudanças, acompanha quota e incidentes de consumo.
-- **Data owner**: accountable por classificação, finalidade, base legal, retenção, mascaramento e autorização de uso de dados.
-- **Platform owner APIM**: accountable pela instância, guardrails, runtime, diagnostics, rede da plataforma e pipeline comum.
-- **Security owner**: accountable pelos controles de autenticação, mTLS/FAPI, threat model e resposta de segurança.
+- **Data owner**: responsável final por classificação, finalidade, base legal, retenção, mascaramento e autorização de uso de dados.
+- **Platform owner APIM**: responsável final pela instância, controles de governança, runtime, diagnostics, rede da plataforma e pipeline comum.
+- **Security owner**: responsável final pelos controles de autenticação, mTLS/FAPI, threat model e resposta de segurança.
 - **DPO/compliance/jurídico** quando classe regulada, LGPD sensível, Open Finance, PCI ou transferência regional.
-- **On-call rotation** (PagerDuty/Opsgenie/Microsoft Teams) do produtor e da plataforma.
+- **Escala de plantão** (PagerDuty/Opsgenie/Microsoft Teams) do produtor e da plataforma.
 - **Aprovador de release** distinto do autor quando PROD crítica (§11.6).
 
-Regra: nenhuma API entra em PROD com owner genérico ("time X") sem pessoa ou papel operacional escalável. Substitutos são permitidos; accountable continua único por decisão.
+Regra: nenhuma API entra em PROD com responsável genérico ("equipe X") sem pessoa ou papel operacional definido para escalonamento. Substitutos são permitidos; cada decisão continua tendo um único responsável final (Accountable).
 
 ### 11.3 RACI resumido
 
@@ -1048,11 +1048,11 @@ RACI usa **um único Accountable (A)** por atividade. Quando houver comitê, ele
 ### 11.4 Experiência do produtor e consumidor
 
 - **Self-service** no Developer Portal: registro, subscription, gestão de keys, exemplos, sandbox.
-- **Producer toolkit**: templates Bicep, fragmentos policy, esqueleto OpenAPI (Apêndice B), pipeline reference (Apêndice D).
-- **Documentação viva**: OpenAPI sempre atual, gerado da fonte; mudanças visíveis no portal.
+- **Ferramentas do produtor**: templates Bicep, fragmentos de policy, esqueleto OpenAPI (Apêndice B), pipeline de referência (Apêndice D).
+- **Documentação atualizada**: OpenAPI gerado da fonte e mantido atualizado; mudanças visíveis no portal.
 - **SLAs do canal de suporte** definidos para consumidores externos.
 
-#### 11.4.1 Jornada do consumidor end-to-end
+#### 11.4.1 Jornada completa do consumidor
 
 | Etapa | Experiência esperada | Evidência/controle |
 |---|---|---|
@@ -1062,7 +1062,7 @@ RACI usa **um único Accountable (A)** por atividade. Quando houver comitê, ele
 | 4. Aprovar | Aprovação por owner correto conforme classe: self-service para baixo risco; governado para regulada/sensível | RACI §11.3, registro de aprovação, prazo/SLA de aprovação medido. |
 | 5. Testar em sandbox | Recebe endpoint sandbox, credenciais/claims de teste, collections e exemplos; erros são diagnósticos sem vazar PII | Sandbox isolado, synthetic tests, dados fictícios, suporte de onboarding. |
 | 6. Promover para produção | Passa por checklist de segurança, quota, contato on-call, fallback e janela de go-live | Gate CI/CD, owner consumidor, plano de rollback e status page. |
-| 7. Acompanhar quota/consumo | Consumidor vê consumo, 429, latência, erros e budget; recebe alertas proativos antes de quota estourar | Workbook/portal por subscription; relatório mensal de top consumers. |
+| 7. Acompanhar quota/consumo | Consumidor vê consumo, 429, latência, erros e orçamento; recebe alertas antes de atingir a quota | Workbook/portal por subscription; relatório mensal dos maiores consumidores. |
 | 8. Suporte e mudança | Canais claros para incidente, dúvida, aumento de quota, deprecação e breaking change | SLA de suporte, comunicação D-90/D-30/D-7, headers `Deprecation`/`Sunset`. |
 
 #### 11.4.2 Comunicação de sunset / deprecação a consumidores
@@ -1082,7 +1082,7 @@ Política: nenhuma versão é removida sem ao menos os 3 primeiros canais ativos
 
 ### 11.5 Modelo de exceção (ciclo de vida formal)
 
-Exceções existem; sem ciclo de vida, viram regra. Modelo mínimo:
+Exceções devem ter aprovação, prazo e critérios de encerramento. Modelo mínimo:
 
 #### 11.5.1 Formulário de exceção
 
@@ -1093,7 +1093,7 @@ Toda exceção (ex.: usar SKU não aprovado, abrir região nova, ignorar policy 
 - Justificativa de negócio.
 - Análise de risco (impacto × probabilidade).
 - Mitigações compensatórias.
-- Aprovador único (depende da criticidade — ver §11.5.3).
+- Aprovador único (depende da criticidade; ver §11.5.3).
 - Prazo de validade (data de expiração obrigatória).
 - Critério de saída (o que precisa acontecer para a exceção ser fechada).
 - Data owner/consumer owner impactado quando a exceção afeta dado ou consumo.
@@ -1102,7 +1102,7 @@ Toda exceção (ex.: usar SKU não aprovado, abrir região nova, ignorar policy 
 
 ```
 [criada] → [em análise] → [aprovada com prazo] → [ativa] → [revisão antes de expirar] →
-   [renovada (raro)] | [encerrada — desvio resolvido] | [escalada — não resolvido no prazo]
+   [renovada (raro)] | [encerrada: desvio resolvido] | [escalada: não resolvido no prazo]
 ```
 
 #### 11.5.3 Aprovador conforme criticidade
@@ -1122,18 +1122,18 @@ Inventário público de exceções (read-only para auditoria) em sistema de tick
 #### 11.5.5 Métricas
 
 - Total de exceções ativas.
-- Exceções vencidas (KPI principal — meta: zero).
+- Exceções vencidas (KPI principal; meta: zero).
 - Tempo médio de exceção (dias).
 - Exceções renovadas (>1 ciclo).
 - Backlog de exceções por classe e por owner.
 
-### 11.6 Self-service vs aprovado (caminho rápido vs caminho governado)
+### 11.6 Autoatendimento e mudanças sujeitas a aprovação
 
-Para evitar que tudo passe pelo time central, mapear tipos de mudança:
+Classificar os tipos de mudança para definir quais exigem aprovação central:
 
 | Tipo de mudança | Caminho | Aprovador único | Gate |
 |---|---|---|---|
-| Nova revision de policy compatível em DEV/UAT | Self-service | API/Product owner | CI verde |
+| Nova revision de policy compatível em DEV/UAT | Self-service | API/Product owner | CI concluída com sucesso |
 | Nova revision compatível em PROD não crítica | Self-service controlado | API/Product owner | CI + CODEOWNERS aplicável |
 | Nova versão de API (incompatível) | Self-service + comunicação | API/Product owner | CI + plano de deprecação |
 | Mudança de policy obrigatória (JWT validation) | Governado | Segurança | Threat model atualizado |
@@ -1153,7 +1153,7 @@ Para APIs críticas/reguladas, o autor do PR/deploy **não pode** ser o aprovado
 - Branch protection/ruleset em `main` e branches de release: PR obrigatório, status checks obrigatórios, review de code owner, bloquear force-push/delete e aplicar a admins quando possível [51].
 - GitHub Environments para `prod`: required reviewers, prevent self-review, deployment branches restritas e segredos só liberados após aprovação [52].
 - Service principal/Managed Identity de deploy sem permissão interativa humana; portal APIM read-only em PROD.
-- Evidência: PR, reviewer, check run, deployment approval, `AzureActivity` e hash do artefato publicado anexados ao change.
+- Evidência: PR, revisor, check run, aprovação da implantação, `AzureActivity` e hash do artefato publicado anexados ao registro de mudança.
 
 #### 11.6.2 Métricas DX e governança
 
@@ -1162,45 +1162,45 @@ Para APIs críticas/reguladas, o autor do PR/deploy **não pode** ser o aprovado
 | Lead time de mudança | Tempo de PR aberto até produção | P50 ≤ 2 dias para self-service; P90 ≤ 10 dias governado |
 | Tempo de onboarding consumidor | Solicitação aprovada até primeiro 2xx em sandbox/prod | Sandbox ≤ 3 dias; PROD ≤ 10 dias |
 | Deploy failure rate | Deploys com rollback/fix-forward ou incidente em 24 h | < 10 %; crítica < 5 % |
-| Satisfação/NPS do consumidor | Survey trimestral por consumidor/parceiro | NPS ≥ 40 ou tendência positiva |
+| Satisfação/NPS do consumidor | Pesquisa trimestral por consumidor/parceiro | NPS ≥ 40 ou tendência positiva |
 | Backlog de exceções | Exceções ativas/vencidas por owner e classe | Vencidas = 0; redução mensal |
 | % mudanças self-service | Mudanças sem comitê manual fora dos gates definidos | ≥ 70 % |
 | Tempo de aprovação governada | SLA de Segurança/DPO/Plataforma para decisões | P90 ≤ 5 dias úteis |
 
-Métrica de saúde: % de mudanças via self-service. Meta: ≥ 70 %. Abaixo disso, plataforma é gargalo ou os gates estão mal calibrados.
+Indicador de governança: percentual de mudanças via self-service. Meta: ≥ 70 %. Resultado inferior indica gargalo na plataforma ou critérios de aprovação inadequados.
 
 ---
 
-## 12. Anti-patterns e boas práticas
+## 12. Práticas inadequadas e boas práticas
 
 ### 12.1 Lista detalhada
 
 #### 1) APIM por aplicação sem critério
-Cada squad cria seu APIM porque pode. Custo explode, catálogo fragmenta, governança evapora. Correção: gate via §4.5; instância dedicada só por exceção justificada.
+A criação de instâncias APIM por cada squad, sem critérios de adoção, aumenta custos e fragmenta o catálogo e a governança. Correção: gate via §4.5; instância dedicada só por exceção justificada.
 
 #### 2) APIM apenas como proxy
-Sem policies, sem versionamento, sem catálogo. Joga fora 80 % do valor. Correção: padrões mínimos (§6, §7) obrigatórios.
+Usar APIM apenas para encaminhar chamadas, sem policies, versionamento e catálogo, deixa de aplicar os controles de governança previstos. Correção: padrões mínimos (§6, §7) obrigatórios.
 
 #### 3) Centralização sem segmentação
-Tudo em um produto, todas APIs misturadas. Correção: workspaces (Premium clássico) ou produtos como limite, ownership claro (§11.2).
+Concentrar todas as APIs em um produto impede a segmentação de consumo e responsabilidades. Correção: workspaces (Premium clássico) ou produtos como limite, com responsabilidades claras (§11.2).
 
 #### 4) Misturar APIs internas/externas/sensíveis sem estratégia
-Tudo no mesmo APIM, sem classes. Correção: matriz §7.7 vinculante; instâncias dedicadas quando criticidade exigir.
+Publicar APIs de diferentes classes no mesmo APIM sem classificá-las impede aplicar os controles previstos. Correção: matriz §7.7 vinculante; instâncias dedicadas quando a criticidade exigir.
 
-#### 5) Sem ownership
-"De quem é essa API?" sem resposta. Correção: §11.2 obrigatório.
+#### 5) Sem responsável definido
+A API não tem responsáveis identificados para operação e decisões. Correção: §11.2 obrigatório.
 
 #### 6) Publicação manual em produção
-Portal → produção → drift. Correção: APIOps (§9), portal read-only em PROD.
+Alterações feitas diretamente no portal geram divergência entre produção e IaC. Correção: APIOps (§9), portal somente leitura em PROD.
 
 #### 7) Sem versionamento
-Mudança quebra consumidor. Correção: §6.4 obrigatório, sunset policy de 90 dias.
+Mudanças incompatíveis afetam consumidores sem uma versão alternativa. Correção: §6.4 obrigatório, política de retirada de 90 dias.
 
 #### 8) Lógica de negócio demais nas policies
-Policies viram código de aplicação. Correção: policies só fazem cross-cutting (auth, throttling, transformação leve, correlation, validação de schema); negócio fica no backend.
+Implementar lógica de negócio nas policies acopla a aplicação ao gateway. Correção: policies só executam funções transversais (auth, throttling, transformação leve, correlação, validação de schema); a lógica de negócio fica no backend.
 
 #### 9) Sem observabilidade
-"Por que está lento?" sem resposta. Correção: §10.1 obrigatório.
+A ausência de telemetria impede diagnosticar a latência e outras falhas. Correção: §10.1 obrigatório.
 
 #### 10) Subscription keys como segurança principal
 API exposta apenas com chave estática. Correção: OAuth/mTLS conforme §7.7.
@@ -1211,26 +1211,26 @@ Bypass via rede pública ao backend. Correção: §7.6 + restrição de rede (Pr
 #### 12) Não separar ambientes
 DEV/UAT/PROD na mesma instância. Correção: instâncias separadas, IaC parametrizado.
 
-#### 13) Escolha tardia de SKU/região (novo)
-Decidir SKU "depois" e descobrir que Premium v2 não está disponível na região, ou que self-hosted requer Premium clássico. Correção: aplicar §1.1 (5 perguntas) e §4.5 antes do design; verificar [1] e [3].
+#### 13) Escolha tardia de SKU/região
+Adiar a escolha de SKU pode resultar em uma arquitetura incompatível com a disponibilidade regional de Premium v2 ou com a exigência de Premium clássico para self-hosted. Correção: aplicar §1.1 (5 perguntas) e §4.5 antes do desenho; verificar [1] e [3].
 
-#### 14) Governança central sem caminho rápido (novo)
-Tudo passa pela plataforma; squads gastam dias para uma revision trivial. Correção: §11.6 — self-service para o comum, governado para o excepcional. Métrica ≥ 70 % self-service.
+#### 14) Governança central sem autoatendimento
+Exigir aprovação da plataforma para toda mudança atrasa até revisions simples. Correção: §11.6, com self-service para mudanças padronizadas e aprovação específica para exceções. Métrica ≥ 70 % self-service.
 
 ### 12.2 Matriz resumida
 
-| Anti-pattern | Sintoma | Correção | Onde |
+| Prática inadequada | Sintoma | Correção | Onde |
 |---|---|---|---|
 | Proxy puro | Sem policies, sem catálogo | Padrões §6, §7 | §12.1 #2 |
-| Sem ownership | Sem responsável | Ownership obrigatório | §11.2 |
+| Sem responsável definido | Sem responsável | Definição obrigatória de responsabilidades | §11.2 |
 | Publicação manual | Drift em produção | APIOps | §9 |
 | Backend exposto | Bypass do APIM | Restrição rede | §7.6 |
-| SKU/região tardia | Surpresa no design | 5 perguntas + matriz §4.5 | §1.1 |
-| Sem self-service | Plataforma gargalo | Caminho rápido | §11.6 |
+| SKU/região tardia | Restrição identificada após o desenho | 5 perguntas + matriz §4.5 | §1.1 |
+| Sem self-service | Plataforma como gargalo | Autoatendimento | §11.6 |
 
 ---
 
-## 13. Recomendações finais e roadmap sugerido
+## 13. Recomendações finais e plano de implantação sugerido
 
 ### 13.1 Recomendações finais
 
@@ -1247,7 +1247,7 @@ Tudo passa pela plataforma; squads gastam dias para uma revision trivial. Corre�
 11. **DR ensaiado** (§10.5) conforme criticidade.
 12. **Runbooks** (§10.6) mínimos com owner.
 
-### 13.2 Roadmap sugerido (com owner, entrega e critério de aceite)
+### 13.2 Plano de implantação sugerido (com responsável, entrega e critério de aceite)
 
 | Horizonte | Entrega | Owner | Critério de aceite |
 |---|---|---|---|
@@ -1255,11 +1255,11 @@ Tudo passa pela plataforma; squads gastam dias para uma revision trivial. Corre�
 | **0–30d** | Inventário inicial de APIs existentes classificadas por §7.7 | Plataforma + squads | Inventário no API Center [10]; 100 % das APIs com classe registrada |
 | **30–60d** | APIM corporativo provisionado via IaC; Azure Policy guardrails ativos | Plataforma | Bicep/Terraform em main; az deployment what-if limpo; Defender for APIs habilitado |
 | **30–60d** | 5 runbooks mínimos (§10.6) escritos e validados em dev | Plataforma + on-call | Cada runbook ensaiado em DEV; documentação publicada |
-| **60–90d** | Pipeline APIOps com lint, gates de classe e drift detection | Plataforma + DevEx | Pipeline em produção; drift report semanal; gate de classe ativo |
+| **60–90d** | Pipeline APIOps com lint, gates de classe e detecção de drift | Plataforma + DevEx | Pipeline em produção; relatório semanal de drift; gate de classe ativo |
 | **60–90d** | Threat model (§7.6) de todas classes em produção | Segurança + DPO | Documento aprovado para cada classe; revisão calendarizada |
 | **90–120d** | FinOps showback por domínio (§8.6) | FinOps + plataforma | Relatório mensal publicado; 3 domínios pilotos com chargeback |
 | **90–120d** | Modelo de exceção (§11.5) em sistema de tickets | Plataforma + risco | Ciclo de vida implementado; inventário acessível |
-| **120–180d** | DR ensaio (§10.5) para 100 % das classes crítica e alta | Plataforma + on-call | Relatório de ensaio com RTO/RPO medidos; ações corretivas em backlog |
+| **120–180d** | Ensaio de DR (§10.5) para 100 % das classes crítica e alta | Plataforma + on-call | Relatório de ensaio com RTO/RPO medidos; ações corretivas em backlog |
 | **180–240d** | Self-service ≥ 70 % (§11.6) | Plataforma + DevEx | Métrica medida e publicada; gate só nos casos definidos |
 | **Contínuo** | Revisão trimestral de SKU/região vs [1][3]; revisão anual de threat models | Arquitetura + segurança | Calendário ativo; ADR atualizada quando muda |
 
@@ -1267,13 +1267,13 @@ Tudo passa pela plataforma; squads gastam dias para uma revision trivial. Corre�
 
 ## 14. Decisões pendentes que dependem do cliente
 
-Decisões do cliente priorizadas por impacto na implantação. Cada item precisa de owner sugerido, prazo e ADR/ticket de evidência.
+As decisões do cliente estão priorizadas por impacto na implantação. Cada item precisa de responsável sugerido, prazo e ADR/ticket de evidência.
 
 | Prioridade | Decisão pendente | Owner sugerido | Gate / critério de aceite |
 |---|---|---|---|
 | **Bloqueia implantação** | Modelo de adoção definitivo (A/B/C) | Head de Arquitetura + Platform owner APIM | ADR aprovada em 30d (§13.2). |
-| **Bloqueia implantação** | Residência obrigatória: Brasil only, geografia específica ou multi-region cross-border | DPO/Compliance + Jurídico | Política regulatória registrada em §2.3.4/§3.4 e gate §10.2.3. |
-| **Bloqueia implantação** | Classe regulatória das APIs do roadmap (Open Finance, LGPD sensível, PCI) | Data owner de cada domínio + API/Product owner | Cada API com classe na ficha de intake (§6.2) e matriz §7.7. |
+| **Bloqueia implantação** | Residência obrigatória: somente Brasil, geografia específica ou multi-region entre países | DPO/Compliance + Jurídico | Política regulatória registrada em §2.3.4/§3.4 e gate §10.2.3. |
+| **Bloqueia implantação** | Classe regulatória das APIs previstas no plano de implantação (Open Finance, LGPD sensível, PCI) | Data owner de cada domínio + API/Product owner | Cada API com classe na ficha de intake (§6.2) e matriz §7.7. |
 | **Bloqueia implantação** | Região/destino de Log Analytics, Application Insights, Event Hub, Sentinel e API Center | DPO/Compliance + Platform owner APIM | ADR regional por classe; sem ADR, pipeline bloqueia diagnostics/publicação (§10.2.3). |
 | **Bloqueia implantação** | Aprovador único de exceções por tipo | CISO/DPO/Compliance executivo | Nomes/papéis cadastrados em §11.5.3 e ferramenta de tickets. |
 | **Bloqueia implantação** | Política de retenção de logs e WORM para auditoria crítica | Data owner + DPO + Auditoria | Tabela §10.7 aprovada; Storage WORM/long-term retention provisionados. |
@@ -1288,148 +1288,148 @@ Decisões do cliente priorizadas por impacto na implantação. Cada item precisa
 
 ## 15. Referências consolidadas
 
-> Formato: **instituição — título — URL — data de acesso**. Todas as referências devem ser revalidadas em datas críticas (regulatório, SKU/região). Data desta consolidação: **18 jun. 2026**.
+> Formato: **instituição; título; URL; data de acesso**. Todas as referências devem ser revalidadas em datas críticas (regulatório, SKU/região). Data desta consolidação: **18 jun. 2026**.
 
 ### Nota contratual e responsabilidade compartilhada
 
 O desenho APIM deve ser lido junto com os **Online Services Terms (OST)** e o **Microsoft Products and Services Data Protection Addendum (DPA)** aplicáveis ao contrato do cliente. Esses documentos não substituem a decisão arquitetural: no modelo de responsabilidade compartilhada, Microsoft opera a infraestrutura/plataforma do serviço em nuvem, enquanto o cliente continua responsável por dados, identidades, configurações, acesso, classificação, retenção, chaves, policies e conformidade do uso da API [45][46][47].
 
-### Azure API Management — conceitos, tiers, regiões e recursos
+### Azure API Management: conceitos, tiers, regiões e recursos
 
-[1] Microsoft Learn — API Management feature-based comparison (v1, v2, Consumption, self-hosted) — https://learn.microsoft.com/en-us/azure/api-management/api-management-features — Acesso em: 18 jun. 2026.
+[1] Microsoft Learn; API Management feature-based comparison (v1, v2, Consumption, self-hosted); <https://learn.microsoft.com/en-us/azure/api-management/api-management-features>; Acesso em: 18 jun. 2026.
 
-[2] Microsoft Learn — APIM v2 tiers overview — https://learn.microsoft.com/en-us/azure/api-management/v2-service-tiers-overview — Acesso em: 18 jun. 2026.
+[2] Microsoft Learn; APIM v2 tiers overview; <https://learn.microsoft.com/en-us/azure/api-management/v2-service-tiers-overview>; Acesso em: 18 jun. 2026.
 
-[3] Microsoft Azure — Products available by region / API Management — https://azure.microsoft.com/explore/global-infrastructure/products-by-region — Acesso em: 18 jun. 2026.
+[3] Microsoft Azure; Products available by region / API Management; <https://azure.microsoft.com/explore/global-infrastructure/products-by-region>; Acesso em: 18 jun. 2026.
 
-[4] Microsoft Learn — Migrate from stv1 to stv2 — https://learn.microsoft.com/en-us/azure/api-management/migrate-stv1-to-stv2 — Acesso em: 18 jun. 2026.
+[4] Microsoft Learn; Migrate from stv1 to stv2; <https://learn.microsoft.com/en-us/azure/api-management/migrate-stv1-to-stv2>; Acesso em: 18 jun. 2026.
 
-[5] Microsoft Learn — Workspaces in Azure API Management — https://learn.microsoft.com/en-us/azure/api-management/workspaces-overview — Acesso em: 18 jun. 2026.
+[5] Microsoft Learn; Workspaces in Azure API Management; <https://learn.microsoft.com/en-us/azure/api-management/workspaces-overview>; Acesso em: 18 jun. 2026.
 
-[6] Microsoft Learn — Capacity Metrics in Azure API Management — https://learn.microsoft.com/en-us/azure/api-management/api-management-capacity — Acesso em: 18 jun. 2026.
+[6] Microsoft Learn; Capacity Metrics in Azure API Management; <https://learn.microsoft.com/en-us/azure/api-management/api-management-capacity>; Acesso em: 18 jun. 2026.
 
-[7] Microsoft Learn — Deploy an Azure API Management service instance to multiple Azure regions — https://learn.microsoft.com/en-us/azure/api-management/api-management-howto-deploy-multi-region — Acesso em: 18 jun. 2026.
+[7] Microsoft Learn; Deploy an Azure API Management service instance to multiple Azure regions; <https://learn.microsoft.com/en-us/azure/api-management/api-management-howto-deploy-multi-region>; Acesso em: 18 jun. 2026.
 
-[8] Microsoft Learn — Self-hosted gateway overview — https://learn.microsoft.com/en-us/azure/api-management/self-hosted-gateway-overview — Acesso em: 18 jun. 2026.
+[8] Microsoft Learn; Self-hosted gateway overview; <https://learn.microsoft.com/en-us/azure/api-management/self-hosted-gateway-overview>; Acesso em: 18 jun. 2026.
 
-[9] Microsoft Learn — Backup and restore an Azure API Management service instance — https://learn.microsoft.com/en-us/azure/api-management/api-management-howto-disaster-recovery-backup-restore — Acesso em: 18 jun. 2026.
+[9] Microsoft Learn; Backup and restore an Azure API Management service instance; <https://learn.microsoft.com/en-us/azure/api-management/api-management-howto-disaster-recovery-backup-restore>; Acesso em: 18 jun. 2026.
 
-[10] Microsoft Learn — Azure API Center overview — https://learn.microsoft.com/en-us/azure/api-center/overview — Acesso em: 18 jun. 2026.
+[10] Microsoft Learn; Azure API Center overview; <https://learn.microsoft.com/en-us/azure/api-center/overview>; Acesso em: 18 jun. 2026.
 
-[11] Microsoft Learn — Azure API Management analytics dashboard retirement (March 2027) — https://learn.microsoft.com/en-us/azure/api-management/breaking-changes/analytics-dashboard-retirement-march-2027 — Acesso em: 18 jun. 2026.
+[11] Microsoft Learn; Azure API Management analytics dashboard retirement (March 2027); <https://learn.microsoft.com/en-us/azure/api-management/breaking-changes/analytics-dashboard-retirement-march-2027>; Acesso em: 18 jun. 2026.
 
-[12] Microsoft Learn — GenAI gateway capabilities in Azure API Management — https://learn.microsoft.com/en-us/azure/api-management/genai-gateway-capabilities — Acesso em: 18 jun. 2026.
+[12] Microsoft Learn; GenAI gateway capabilities in Azure API Management; <https://learn.microsoft.com/en-us/azure/api-management/genai-gateway-capabilities>; Acesso em: 18 jun. 2026.
 
 ### Rede, conectividade, resiliência e arquitetura
 
-[13] Azure GitHub — Azure/apiops toolkit — https://github.com/Azure/apiops — Acesso em: 18 jun. 2026.
+[13] Azure GitHub; Azure/apiops toolkit; <https://github.com/Azure/apiops>; Acesso em: 18 jun. 2026.
 
-[14] Microsoft Learn — ARM/Bicep deployment what-if operation — https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/deploy-what-if — Acesso em: 18 jun. 2026.
+[14] Microsoft Learn; ARM/Bicep deployment what-if operation; <https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/deploy-what-if>; Acesso em: 18 jun. 2026.
 
-[15] Microsoft Learn — Use API Management with virtual networks — https://learn.microsoft.com/en-us/azure/api-management/api-management-using-with-internal-vnet — Acesso em: 18 jun. 2026.
+[15] Microsoft Learn; Use API Management with virtual networks; <https://learn.microsoft.com/en-us/azure/api-management/api-management-using-with-internal-vnet>; Acesso em: 18 jun. 2026.
 
 ### Policies, segurança, identidade e padrões externos
 
-[16] Microsoft Learn — validate-azure-ad-token policy — https://learn.microsoft.com/en-us/azure/api-management/validate-azure-ad-token-policy — Acesso em: 18 jun. 2026.
+[16] Microsoft Learn; validate-azure-ad-token policy; <https://learn.microsoft.com/en-us/azure/api-management/validate-azure-ad-token-policy>; Acesso em: 18 jun. 2026.
 
-[17] Microsoft Learn — Microsoft Defender for APIs — https://learn.microsoft.com/en-us/azure/defender-for-cloud/defender-for-apis-introduction — Acesso em: 18 jun. 2026.
+[17] Microsoft Learn; Microsoft Defender for APIs; <https://learn.microsoft.com/en-us/azure/defender-for-cloud/defender-for-apis-introduction>; Acesso em: 18 jun. 2026.
 
-[18] Microsoft Learn — Observability in Azure API Management — https://learn.microsoft.com/en-us/azure/api-management/observability — Acesso em: 18 jun. 2026.
+[18] Microsoft Learn; Observability in Azure API Management; <https://learn.microsoft.com/en-us/azure/api-management/observability>; Acesso em: 18 jun. 2026.
 
-[19] Microsoft Learn — Configure mutual certificate authentication in Azure API Management — https://learn.microsoft.com/en-us/azure/api-management/api-management-howto-mutual-certificates-for-clients — Acesso em: 18 jun. 2026.
+[19] Microsoft Learn; Configure mutual certificate authentication in Azure API Management; <https://learn.microsoft.com/en-us/azure/api-management/api-management-howto-mutual-certificates-for-clients>; Acesso em: 18 jun. 2026.
 
-[20] OWASP Foundation — OWASP API Security Top 10 2023 — https://owasp.org/API-Security/editions/2023/en/0x00-header/ — Acesso em: 18 jun. 2026.
+[20] OWASP Foundation; OWASP API Security Top 10 2023; <https://owasp.org/API-Security/editions/2023/en/0x00-header/>; Acesso em: 18 jun. 2026.
 
-[21] IETF — RFC 9700: Best Current Practice for OAuth 2.0 Security — https://datatracker.ietf.org/doc/rfc9700/ — Acesso em: 18 jun. 2026.
+[21] IETF; RFC 9700: Best Current Practice for OAuth 2.0 Security; <https://datatracker.ietf.org/doc/rfc9700/>; Acesso em: 18 jun. 2026.
 
-[22] OpenID Foundation — Financial-grade API (FAPI) 1.0 Part 1 — https://openid.net/specs/openid-financial-api-part-1-1_0.html — Acesso em: 18 jun. 2026.
+[22] OpenID Foundation; Financial-grade API (FAPI) 1.0 Part 1; <https://openid.net/specs/openid-financial-api-part-1-1_0.html>; Acesso em: 18 jun. 2026.
 
-[23] OpenID Foundation — FAPI 2.0 Security Profile — https://openid.net/specs/fapi-security-profile-2_0.html — Acesso em: 18 jun. 2026.
+[23] OpenID Foundation; FAPI 2.0 Security Profile; <https://openid.net/specs/fapi-security-profile-2_0.html>; Acesso em: 18 jun. 2026.
 
-### API design, catálogo, produtos e developer experience
+### Desenho de APIs, catálogo, produtos e experiência do desenvolvedor
 
-[24] Microsoft Learn — Azure API Center key concepts / registry and metadata — https://learn.microsoft.com/en-us/azure/api-center/key-concepts — Acesso em: 18 jun. 2026.
+[24] Microsoft Learn; Azure API Center key concepts / registry and metadata; <https://learn.microsoft.com/en-us/azure/api-center/key-concepts>; Acesso em: 18 jun. 2026.
 
-[25] Microsoft Learn — Defender for APIs detections — https://learn.microsoft.com/en-us/azure/defender-for-cloud/defender-for-apis-introduction — Acesso em: 18 jun. 2026.
+[25] Microsoft Learn; Defender for APIs detections; <https://learn.microsoft.com/en-us/azure/defender-for-cloud/defender-for-apis-introduction>; Acesso em: 18 jun. 2026.
 
 ### DevOps, APIOps, IaC e qualidade
 
-[26] Microsoft Learn — Automated API deployments with APIOps — https://learn.microsoft.com/en-us/azure/architecture/example-scenario/devops/automated-api-deployments-apiops — Acesso em: 18 jun. 2026.
+[26] Microsoft Learn; Automated API deployments with APIOps; <https://learn.microsoft.com/en-us/azure/architecture/example-scenario/devops/automated-api-deployments-apiops>; Acesso em: 18 jun. 2026.
 
 ### Regulatório (Brasil)
 
-[27] ANPD — Resolução CD/ANPD nº 15/2024 e comunicação de incidente de segurança — https://www.gov.br/anpd/pt-br/assuntos/noticias/anpd-publica-regulamento-de-comunicacao-de-incidente-de-seguranca — Acesso em: 18 jun. 2026.
+[27] ANPD; Resolução CD/ANPD nº 15/2024 e comunicação de incidente de segurança; <https://www.gov.br/anpd/pt-br/assuntos/noticias/anpd-publica-regulamento-de-comunicacao-de-incidente-de-seguranca>; Acesso em: 18 jun. 2026.
 
-[28] BACEN — Resolução BCB nº 32/2020 (Open Banking/Open Finance) — https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolu%C3%A7%C3%A3o%20BCB&numero=32 — Acesso em: 18 jun. 2026.
+[28] BACEN; Resolução BCB nº 32/2020 (Open Banking/Open Finance); <https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolu%C3%A7%C3%A3o%20BCB&numero=32>; Acesso em: 18 jun. 2026.
 
-[28b] BACEN — Resolução BCB nº 198/2022 (serviços de processamento/armazenamento e computação em nuvem) — https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolu%C3%A7%C3%A3o%20BCB&numero=198 — Acesso em: 18 jun. 2026.
+[28b] BACEN; Resolução BCB nº 198/2022 (serviços de processamento/armazenamento e computação em nuvem); <https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolu%C3%A7%C3%A3o%20BCB&numero=198>; Acesso em: 18 jun. 2026.
 
-[28c] CMN — Resolução CMN nº 4.893/2021 (política de segurança cibernética e contratação de nuvem) — https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolu%C3%A7%C3%A3o%20CMN&numero=4893 — Acesso em: 18 jun. 2026.
+[28c] CMN; Resolução CMN nº 4.893/2021 (política de segurança cibernética e contratação de nuvem); <https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolu%C3%A7%C3%A3o%20CMN&numero=4893>; Acesso em: 18 jun. 2026.
 
-[29] Open Finance Brasil — Portal oficial — https://openfinancebrasil.org.br/ — Acesso em: 18 jun. 2026.
+[29] Open Finance Brasil; Portal oficial; <https://openfinancebrasil.org.br/>; Acesso em: 18 jun. 2026.
 
-[29b] Open Finance Brasil — Padrões Técnicos / Segurança — https://openfinancebrasil.atlassian.net/wiki/spaces/OF/pages/17378602/Padr+es+T+cnicos — Acesso em: 18 jun. 2026.
+[29b] Open Finance Brasil; Padrões Técnicos / Segurança; <https://openfinancebrasil.atlassian.net/wiki/spaces/OF/pages/17378602/Padr+es+T+cnicos>; Acesso em: 18 jun. 2026.
 
 > **Nota sobre URLs regulatórias:** as URLs listadas foram a referência ao tempo desta consolidação. Atos normativos podem ser republicados; **antes de uso em auditoria, a equipe de compliance confirma o ato vigente** (número, ano, redação) na fonte oficial.
 
 ### Operações, observabilidade, retenção e monitoramento
 
-[30] Microsoft Azure — Pricing Calculator (APIM, Log Analytics, Defender for APIs, Front Door) — https://azure.microsoft.com/pricing/calculator/ — Acesso em: 18 jun. 2026.
+[30] Microsoft Azure; Pricing Calculator (APIM, Log Analytics, Defender for APIs, Front Door); <https://azure.microsoft.com/pricing/calculator/>; Acesso em: 18 jun. 2026.
 
-[31] Microsoft Learn — Tutorial: Monitor APIs in Azure API Management with Azure Monitor — https://learn.microsoft.com/en-us/azure/api-management/api-management-howto-use-azure-monitor — Acesso em: 18 jun. 2026.
+[31] Microsoft Learn; Tutorial: Monitor APIs in Azure API Management with Azure Monitor; <https://learn.microsoft.com/en-us/azure/api-management/api-management-howto-use-azure-monitor>; Acesso em: 18 jun. 2026.
 
-[32] Microsoft Learn — Integrate Azure API Management with Azure Application Insights — https://learn.microsoft.com/en-us/azure/api-management/api-management-howto-app-insights — Acesso em: 18 jun. 2026.
+[32] Microsoft Learn; Integrate Azure API Management with Azure Application Insights; <https://learn.microsoft.com/en-us/azure/api-management/api-management-howto-app-insights>; Acesso em: 18 jun. 2026.
 
-[36] Microsoft Learn — Monitoring data reference for Azure API Management — https://learn.microsoft.com/en-us/azure/api-management/monitor-api-management-reference — Acesso em: 18 jun. 2026.
+[36] Microsoft Learn; Monitoring data reference for Azure API Management; <https://learn.microsoft.com/en-us/azure/api-management/monitor-api-management-reference>; Acesso em: 18 jun. 2026.
 
-[37] Microsoft Learn — Diagnostic settings in Azure Monitor — https://learn.microsoft.com/en-us/azure/azure-monitor/platform/diagnostic-settings — Acesso em: 18 jun. 2026.
+[37] Microsoft Learn; Diagnostic settings in Azure Monitor; <https://learn.microsoft.com/en-us/azure/azure-monitor/platform/diagnostic-settings>; Acesso em: 18 jun. 2026.
 
-[38] Microsoft Learn — Manage data retention in a Log Analytics workspace — https://learn.microsoft.com/en-us/azure/azure-monitor/logs/data-retention-configure — Acesso em: 18 jun. 2026.
+[38] Microsoft Learn; Manage data retention in a Log Analytics workspace; <https://learn.microsoft.com/en-us/azure/azure-monitor/logs/data-retention-configure>; Acesso em: 18 jun. 2026.
 
-[39] Microsoft Learn — Immutable storage for blob data — https://learn.microsoft.com/en-us/azure/storage/blobs/immutable-storage-overview — Acesso em: 18 jun. 2026.
+[39] Microsoft Learn; Immutable storage for blob data; <https://learn.microsoft.com/en-us/azure/storage/blobs/immutable-storage-overview>; Acesso em: 18 jun. 2026.
 
-[40] Microsoft Learn — Design a Log Analytics workspace architecture — https://learn.microsoft.com/en-us/azure/azure-monitor/logs/workspace-design — Acesso em: 18 jun. 2026.
+[40] Microsoft Learn; Design a Log Analytics workspace architecture; <https://learn.microsoft.com/en-us/azure/azure-monitor/logs/workspace-design>; Acesso em: 18 jun. 2026.
 
-[41] Microsoft Learn — Reliability in Azure API Center — https://learn.microsoft.com/en-us/azure/reliability/reliability-api-center — Acesso em: 18 jun. 2026.
+[41] Microsoft Learn; Reliability in Azure API Center; <https://learn.microsoft.com/en-us/azure/reliability/reliability-api-center>; Acesso em: 18 jun. 2026.
 
-[42] Microsoft Learn — Onboard to Microsoft Sentinel — https://learn.microsoft.com/en-us/azure/sentinel/quickstart-onboard — Acesso em: 18 jun. 2026.
+[42] Microsoft Learn; Onboard to Microsoft Sentinel; <https://learn.microsoft.com/en-us/azure/sentinel/quickstart-onboard>; Acesso em: 18 jun. 2026.
 
-[43] Microsoft Learn — Application Insights FAQ: data collection, retention, storage, and privacy — https://learn.microsoft.com/en-us/azure/azure-monitor/app/application-insights-faq#how-does-application-insights-handle-data-collection--retention--storage--and-privacy — Acesso em: 18 jun. 2026.
+[43] Microsoft Learn; Application Insights FAQ: data collection, retention, storage, and privacy; <https://learn.microsoft.com/en-us/azure/azure-monitor/app/application-insights-faq#how-does-application-insights-handle-data-collection--retention--storage--and-privacy>; Acesso em: 18 jun. 2026.
 
-[44] Microsoft Learn — Geo-disaster recovery for Azure Event Hubs — https://learn.microsoft.com/en-us/azure/event-hubs/event-hubs-geo-dr — Acesso em: 18 jun. 2026.
+[44] Microsoft Learn; Geo-disaster recovery for Azure Event Hubs; <https://learn.microsoft.com/en-us/azure/event-hubs/event-hubs-geo-dr>; Acesso em: 18 jun. 2026.
 
-[53] Microsoft Learn — Azure Workbooks overview — https://learn.microsoft.com/en-us/azure/azure-monitor/visualize/workbooks-overview — Acesso em: 18 jun. 2026.
+[53] Microsoft Learn; Azure Workbooks overview; <https://learn.microsoft.com/en-us/azure/azure-monitor/visualize/workbooks-overview>; Acesso em: 18 jun. 2026.
 
 ### Landing zone, governança e Azure Policy
 
-[33] Microsoft Learn — Azure landing zones design areas — https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/ready/landing-zone/design-areas — Acesso em: 18 jun. 2026.
+[33] Microsoft Learn; Azure landing zones design areas; <https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/ready/landing-zone/design-areas>; Acesso em: 18 jun. 2026.
 
-[34] Microsoft Learn — API Management policy reference — https://learn.microsoft.com/en-us/azure/api-management/policy-reference — Acesso em: 18 jun. 2026.
+[34] Microsoft Learn; API Management policy reference; <https://learn.microsoft.com/en-us/azure/api-management/policy-reference>; Acesso em: 18 jun. 2026.
 
-[35] Microsoft Learn — Azure Policy guest configuration and remediation — https://learn.microsoft.com/en-us/azure/governance/policy/concepts/guest-configuration — Acesso em: 18 jun. 2026.
+[35] Microsoft Learn; Azure Policy guest configuration and remediation; <https://learn.microsoft.com/en-us/azure/governance/policy/concepts/guest-configuration>; Acesso em: 18 jun. 2026.
 
 ### Contratos, responsabilidade compartilhada e frameworks de controle
 
-[45] Microsoft Learn — Shared responsibility in the cloud — https://learn.microsoft.com/en-us/azure/security/fundamentals/shared-responsibility — Acesso em: 18 jun. 2026.
+[45] Microsoft Learn; Shared responsibility in the cloud; <https://learn.microsoft.com/en-us/azure/security/fundamentals/shared-responsibility>; Acesso em: 18 jun. 2026.
 
-[46] Microsoft Licensing — Online Services Terms (OST) — https://www.microsoft.com/licensing/docs/view/Online-Services-Terms — Acesso em: 18 jun. 2026.
+[46] Microsoft Licensing; Online Services Terms (OST); <https://www.microsoft.com/licensing/docs/view/Online-Services-Terms>; Acesso em: 18 jun. 2026.
 
-[47] Microsoft Licensing — Microsoft Products and Services Data Protection Addendum (DPA) — https://www.microsoft.com/licensing/docs/view/Microsoft-Products-and-Services-Data-Protection-Addendum-DPA — Acesso em: 18 jun. 2026.
+[47] Microsoft Licensing; Microsoft Products and Services Data Protection Addendum (DPA); <https://www.microsoft.com/licensing/docs/view/Microsoft-Products-and-Services-Data-Protection-Addendum-DPA>; Acesso em: 18 jun. 2026.
 
-[48] ISACA — COBIT 2019 framework resources — https://www.isaca.org/resources/cobit — Acesso em: 18 jun. 2026.
+[48] ISACA; COBIT 2019 framework resources; <https://www.isaca.org/resources/cobit>; Acesso em: 18 jun. 2026.
 
-[49] COSO — Internal Control — Integrated Framework guidance — https://www.coso.org/guidance-on-ic — Acesso em: 18 jun. 2026.
+[49] COSO; Internal Control: Integrated Framework guidance; <https://www.coso.org/guidance-on-ic>; Acesso em: 18 jun. 2026.
 
-[50] GitHub Docs — About code owners — https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners — Acesso em: 18 jun. 2026.
+[50] GitHub Docs; About code owners; <https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners>; Acesso em: 18 jun. 2026.
 
-[51] GitHub Docs — About protected branches — https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches — Acesso em: 18 jun. 2026.
+[51] GitHub Docs; About protected branches; <https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches>; Acesso em: 18 jun. 2026.
 
-[52] GitHub Docs — Deployments and environments — https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments — Acesso em: 18 jun. 2026.
+[52] GitHub Docs; Deployments and environments; <https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments>; Acesso em: 18 jun. 2026.
 
 
-## Apêndice A — Exemplos de policy XML por classe (§7.7)
+## Apêndice A: exemplos de policy XML por classe (§7.7)
 
-> Os fragmentos abaixo são **referência**. Em produção: usar Policy Fragments, named values do Key Vault para chaves, e validar com lint.
+> Os fragmentos abaixo são exemplos de referência. Em produção: usar Policy Fragments, named values do Key Vault para chaves e validar com lint.
 
 ### A.1 Classe "Interna"
 
@@ -1513,7 +1513,7 @@ O desenho APIM deve ser lido junto com os **Online Services Terms (OST)** e o **
     </validate-content>
     <rate-limit-by-key calls="60" renewal-period="60" counter-key="@(context.Subscription.Id)" />
     <set-variable name="subjectId" value="@((string)context.Request.MatchedParameters.GetValueOrDefault("subjectId",""))" />
-    <!-- NUNCA logar o header Authorization / bearer token. Registrar apenas claims ja validadas pelo validate-azure-ad-token acima (scope, client_id). -->
+    <!-- Nunca registrar o header Authorization / bearer token em logs. Registrar apenas claims já validadas pelo validate-azure-ad-token acima (scope, client_id). -->
     <set-variable name="authScope" value="@{
         var jwt = context.Request.Headers.GetValueOrDefault("Authorization","").Replace("Bearer ","").Trim().AsJwt();
         return jwt?.Claims.GetValueOrDefault("scp","") ?? "";
@@ -1546,14 +1546,14 @@ O desenho APIM deve ser lido junto com os **Online Services Terms (OST)** e o **
 
 ### A.4 Classe "Regulada/financeira (Open Finance)"
 
-> **Exemplo vs produção:** o XML abaixo é exemplo de padrão verificável para mTLS + sender-constrained token. Em produção, antes do deploy: (1) habilitar negociação de certificado de cliente no gateway/custom domain; (2) cadastrar no APIM as CAs raiz/intermediárias ICP-Brasil/Open Finance aprovadas; (3) validar CRL/OCSP/revogação e rotação; (4) testar com certificado válido, expirado, revogado e de emissor não autorizado; (5) confirmar com compliance o perfil FAPI/Open Finance vigente [19][29b][19].
+> **Requisitos para produção:** o XML abaixo exemplifica um padrão verificável para mTLS + sender-constrained token. Em produção, antes do deploy: (1) habilitar negociação de certificado de cliente no gateway/custom domain; (2) cadastrar no APIM as CAs raiz/intermediárias ICP-Brasil/Open Finance aprovadas; (3) validar CRL/OCSP/revogação e rotação; (4) testar com certificado válido, expirado, revogado e de emissor não autorizado; (5) confirmar com compliance o perfil FAPI/Open Finance vigente [19][29b][19].
 
 ```xml
 <policies>
   <inbound>
     <base />
 
-    <!-- mTLS real: falha se o cliente não apresentar certificado confiável, vigente, não revogado e emitido pela cadeia aprovada. -->
+    <!-- Validação mTLS: falha se o cliente não apresentar certificado confiável, vigente, não revogado e emitido pela cadeia aprovada. -->
     <validate-client-certificate
         validate-revocation="true"
         validate-trust="true"
@@ -1561,7 +1561,7 @@ O desenho APIM deve ser lido junto com os **Online Services Terms (OST)** e o **
         validate-not-after="true"
         ignore-error="false">
       <identities>
-        <!-- IDs de certificados/CA carregados em APIM. Exemplos: substituir pelos IDs reais da cadeia ICP-Brasil/Open Finance aprovada. -->
+        <!-- IDs de certificados/CA carregados no APIM. Substituir os exemplos pelos IDs reais da cadeia ICP-Brasil/Open Finance aprovada. -->
         <identity issuer-certificate-id="{{openfinance-icp-br-root-ca-id}}" />
         <identity issuer-certificate-id="{{openfinance-directory-root-ca-id}}" />
       </identities>
@@ -1583,7 +1583,7 @@ O desenho APIM deve ser lido junto com os **Online Services Terms (OST)** e o **
         <claim name="scope" match="any">
           <value>{{openfinance-scope}}</value>
         </claim>
-        <!-- Sender-constrained token: cnf precisa existir; comparação x5t#S256 ocorre no choose abaixo. -->
+        <!-- Sender-constrained token: cnf precisa existir; a comparação de x5t#S256 ocorre no choose abaixo. -->
         <claim name="cnf" match="all" />
       </required-claims>
     </validate-jwt>
@@ -1629,7 +1629,7 @@ O desenho APIM deve ser lido junto com os **Online Services Terms (OST)** e o **
 </policies>
 ```
 
-> Produção não deve depender de helper fictício de validação de cadeia. A cadeia é validada por `validate-client-certificate` contra CAs configuradas no APIM; o token é sender-constrained pela claim `cnf` (`x5t#S256`) vinculada ao certificado apresentado; e o backend continua responsável por consentimento, autorização de objeto e regra FAPI/Open Finance fina.
+> Em produção, a validação da cadeia deve ser implementada, sem depender de funções auxiliares fictícias. A cadeia é validada por `validate-client-certificate` com as CAs configuradas no APIM; o token é sender-constrained pela claim `cnf` (`x5t#S256`) vinculada ao certificado apresentado; e o backend continua responsável por consentimento, autorização de objeto e regras específicas de FAPI/Open Finance.
 
 ### A.5 Classe "Administrativa"
 
@@ -1678,7 +1678,7 @@ O desenho APIM deve ser lido junto com os **Online Services Terms (OST)** e o **
 
 ---
 
-## Apêndice B — Esqueleto OpenAPI corporativo
+## Apêndice B: esqueleto OpenAPI corporativo
 
 ```yaml
 openapi: 3.0.3
@@ -1686,13 +1686,13 @@ info:
   title: "{nome-da-api}"
   version: "1.0.0"
   description: |
-    {descrição curta}
-    - Owner: {squad / lead / on-call}
+    {descrição breve da API}
+    - Responsável: {squad / líder técnico / plantão}
     - Classe (§7.7): {interna | externa-b2b | sensivel | regulada | administrativa | publica}
-    - Base legal LGPD: {n/a | art. 7º §X}
+    - Base legal LGPD: {não se aplica | art. 7º §X}
     - Retenção mínima de log: {90d | 1a | 2a | 5a | 7a}
   contact:
-    name: "Time {squad}"
+    name: "Equipe {squad}"
     email: "{squad}@empresa.com"
   license:
     name: "Uso interno corporativo"
@@ -1769,27 +1769,27 @@ components:
 
 ---
 
-## Apêndice C — Template de ADR (Architecture Decision Record)
+## Apêndice C: modelo de ADR (Architecture Decision Record)
 
 ```markdown
 # ADR-APIM-{NNN}: {Título da decisão}
 
 - **Status:** Proposta | Aceita | Substituída por ADR-APIM-{MMM} | Obsoleta
 - **Data:** AAAA-MM-DD
-- **Decisores:** {nome — papel}, {nome — papel}
+- **Decisores:** {nome (papel)}, {nome (papel)}
 - **Consultados:** {DPO, Segurança, FinOps, Auditoria, …}
 - **Informados:** {Squads consumidoras, Plataforma}
 
 ## 1. Contexto
-{Problema, restrições, requisitos regulatórios, prazo. Citar drivers de §2.3 quando aplicável.}
+{Problema, restrições, requisitos regulatórios e prazo. Citar requisitos de §2.3 quando aplicável.}
 
 ## 2. Opções avaliadas
-- Opção A: {descrição} — prós/contras
-- Opção B: {descrição} — prós/contras
-- Opção C: {descrição} — prós/contras
+- Opção A: {descrição}; vantagens e desvantagens
+- Opção B: {descrição}; vantagens e desvantagens
+- Opção C: {descrição}; vantagens e desvantagens
 
 ## 3. Decisão
-{Opção escolhida e justificativa enxuta.}
+{Opção escolhida e justificativa concisa.}
 
 ## 4. Consequências
 - Positivas
@@ -1798,7 +1798,7 @@ components:
 - Riscos mitigados
 
 ## 5. Critérios de revalidação
-- Eventos que disparam revisão (mudança regulatória, disponibilidade regional, mudança de SKU, métrica X estourando)
+- Eventos que exigem revisão (mudança regulatória, disponibilidade regional, mudança de SKU, métrica X acima do limite)
 - Frequência mínima de revisão: trimestral / semestral / anual.
 
 ## 6. Mapeamento RACI
@@ -1808,14 +1808,14 @@ components:
 | Monitoramento | R | R | C | I |
 
 ## 7. Referências
-- §X do guia APIM corporativo (v3)
+- §X do guia APIM corporativo
 - [n] da §15
 - Documentos internos
 ```
 
 ---
 
-## Apêndice D — Fragmento de pipeline (GitHub Actions YAML)
+## Apêndice D: fragmento de pipeline (GitHub Actions YAML)
 
 ```yaml
 name: apim-ci
@@ -1834,7 +1834,7 @@ on:
       - "policies/**"
       - "bicep/**"
   schedule:
-    # Drift semanal fora do horário comercial. Ajustar fuso/janela do cliente.
+    # Verificação semanal de drift fora do horário comercial. Ajustar ao fuso e à janela do cliente.
     - cron: "17 3 * * 1"
   workflow_dispatch:
 
@@ -1851,23 +1851,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Spectral lint OpenAPI
+      - name: Valida OpenAPI com Spectral
         uses: stoplightio/spectral-action@v0.8.11
         with:
           file_glob: "apis/**/*.yaml"
           spectral_ruleset: ".spectral.yaml"
-      - name: Breaking change gate
+      - name: Verifica mudanças incompatíveis
         run: ./scripts/openapi-breaking-change.sh apis/
 
   lint-policy-xml:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: xmllint policies
+      - name: Valida policies com xmllint
         run: |
           sudo apt-get update && sudo apt-get install -y libxml2-utils
           find policies -name "*.xml" -print0 | xargs -0 -I{} xmllint --noout "{}"
-      - name: Policy linter customizado
+      - name: Executa linter personalizado de policies
         run: ./scripts/policy-lint.sh policies/ --require-base
 
   validate-class-gate:
@@ -1876,7 +1876,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verifica ficha de intake (classe regulatória)
         run: ./scripts/check-intake-class.sh apis/
-      - name: Secrets, CORS, products, quotas e diagnostics
+      - name: Verifica segredos, CORS, produtos, quotas e diagnósticos
         run: ./scripts/check-apim-release-gates.sh apis/ policies/ bicep/
 
   bicep-what-if:
@@ -1911,11 +1911,11 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      - name: Deploy APIM IaC
+      - name: Implanta APIM via IaC
         run: ./scripts/deploy-apim.sh prod
-      - name: Post-deploy smoke/contract/auth/quota tests
+      - name: Executa testes de smoke, contrato, autenticação e quota após implantação
         run: ./scripts/post-deploy-tests.sh prod
-      - name: Upload production evidence
+      - name: Publica evidências de produção
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -1932,11 +1932,11 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      - name: APIOps Toolkit extractor
+      - name: Extrai configuração com APIOps Toolkit
         run: |
           mkdir -p artifacts/extracted-config
           ./tools/apiops-extractor.sh --output artifacts/extracted-config 2>&1 | tee artifacts/apiops-extractor.log
-      - name: Compare to repo
+      - name: Compara configuração com o repositório
         run: |
           mkdir -p artifacts
           diff -ru apis/ artifacts/extracted-config/ > artifacts/drift-report.diff || true
@@ -1946,33 +1946,33 @@ jobs:
             echo "DRIFT_DETECTED=false" >> "$GITHUB_ENV"
             echo "No drift detected" > artifacts/drift-report.diff
           fi
-      - name: Upload drift report
+      - name: Publica relatório de drift
         uses: actions/upload-artifact@v4
         with:
           name: drift-report
           path: |
             artifacts/drift-report.diff
             artifacts/apiops-extractor.log
-      - name: Fail when drift exists
+      - name: Interrompe com erro se houver drift
         if: env.DRIFT_DETECTED == 'true'
         run: |
           echo "Drift detected. Open an issue and reconcile via IaC, not manually."
           exit 1
 ```
 
-> Para produção, configurar o **GitHub Environment `production`** com reviewers obrigatórios (plataforma + owner + segurança/compliance quando regulado), secrets segregados, branch protection e retenção dos artifacts de evidência. O YAML referencia o environment; a aprovação é aplicada na configuração do repositório.
+> Para produção, configurar o **GitHub Environment `production`** com revisores obrigatórios (plataforma + responsável + segurança/compliance quando regulado), segredos segregados, proteção de branches e retenção dos artefatos de evidência. O YAML referencia o environment; a aprovação é aplicada na configuração do repositório.
 
 ---
 
-## Apêndice E — Glossário
+## Apêndice E: glossário
 
 | Sigla | Expansão | Observação |
 |---|---|---|
 | ADR | Architecture Decision Record | Registro de decisão arquitetural; ver Apêndice C |
 | ANPD | Autoridade Nacional de Proteção de Dados | Autoridade brasileira de LGPD |
 | AKS | Azure Kubernetes Service | Para self-hosted gateway |
-| API | Application Programming Interface | — |
-| BACEN | Banco Central do Brasil | — |
+| API | Application Programming Interface | Interface de programação de aplicações |
+| BACEN | Banco Central do Brasil | Autoridade monetária brasileira |
 | BCP | Business Continuity Plan | Plano de continuidade |
 | CIDR | Classless Inter-Domain Routing | Notação de bloco IP |
 | CMN | Conselho Monetário Nacional | Emite resoluções complementares ao BACEN |
@@ -1980,7 +1980,7 @@ jobs:
 | COSO | Committee of Sponsoring Organizations of the Treadway Commission | Framework de controles internos e gestão de risco |
 | CORS | Cross-Origin Resource Sharing | Política HTTP |
 | DCR | Dynamic Client Registration | Registro dinâmico de cliente OAuth (RFC 7591) |
-| DNS | Domain Name System | — |
+| DNS | Domain Name System | Sistema de nomes de domínio |
 | DPA | Data Protection Addendum | Aditivo contratual Microsoft para proteção de dados |
 | DPO | Data Protection Officer / Encarregado | Papel exigido pela LGPD |
 | DR | Disaster Recovery | Continuidade pós-incidente |
@@ -2005,8 +2005,8 @@ jobs:
 | OAuth | Open Authorization | RFC 6749 + RFC 9700 (BCP) |
 | OIDC | OpenID Connect | Camada sobre OAuth 2.0 |
 | OST | Online Services Terms | Termos contratuais Microsoft para serviços online |
-| OWASP | Open Web Application Security Project | — |
-| PCI-DSS | Payment Card Industry Data Security Standard | — |
+| OWASP | Open Web Application Security Project | Referência em segurança de aplicações |
+| PCI-DSS | Payment Card Industry Data Security Standard | Padrão de segurança de dados de cartões de pagamento |
 | PII | Personally Identifiable Information | Dados pessoais |
 | PIM | Privileged Identity Management | Microsoft Entra ID |
 | PKCE | Proof Key for Code Exchange | RFC 7636, para clientes públicos |
@@ -2021,19 +2021,19 @@ jobs:
 | SLO | Service Level Objective | Meta operacional interna |
 | SOC | Security Operations Center | Time de operações de segurança |
 | SoD | Segregation of Duties | Autor, aprovador e operador separados em mudança crítica |
-| TLS | Transport Layer Security | — |
-| TPS | Transactions Per Second | — |
+| TLS | Transport Layer Security | Segurança da comunicação em trânsito |
+| TPS | Transactions Per Second | Transações por segundo |
 | VNet | Virtual Network | Azure |
 | WAF | Web Application Firewall | Application Gateway / Front Door |
 | WORM | Write Once, Read Many | Imutabilidade: dado gravado não pode ser alterado/apagado no período |
 
 ---
 
-## Apêndice F — Mapeamento ISO 27001 / NIST CSF / COBIT 2019 / COSO → controles APIM
+## Apêndice F: mapeamento ISO 27001 / NIST CSF / COBIT 2019 / COSO → controles APIM
 
-Mapeamento ilustrativo (não exaustivo) para apoiar conversa com auditoria/compliance. COBIT/COSO são usados como linguagem de governança/controle; o controle real é a evidência técnica (PR, policy, AzureActivity, workbook, runbook, aprovação) [48][49].
+Mapeamento ilustrativo (não exaustivo) para apoiar a análise de auditoria/compliance. COBIT/COSO fornecem a terminologia de governança e controle; a implementação deve ser demonstrada por evidência técnica (PR, policy, AzureActivity, workbook, runbook, aprovação) [48][49].
 
-| Controle ISO 27001:2022 (Anexo A) | NIST CSF 2.0 | COBIT 2019 | COSO | Onde aterrissa em APIM |
+| Controle ISO 27001:2022 (Anexo A) | NIST CSF 2.0 | COBIT 2019 | COSO | Aplicação no APIM |
 |---|---|---|---|---|
 | A.5.7 Threat intelligence | ID.RA-02 | APO12 / DSS05 | Risk Assessment | §7.6 threat model + Defender for APIs [25] |
 | A.5.15 Access control | PR.AA-01 | DSS05 / APO13 | Control Activities | §7.1, §7.2, §7.7 |
@@ -2057,22 +2057,22 @@ Mapeamento ilustrativo (não exaustivo) para apoiar conversa com auditoria/compl
 | A.8.32 Change management | PR.PS-01 | BAI06 | Control Activities / Information & Communication | §11.6 self-service vs governado; PR + branch protection |
 | A.8.34 Protection during audit & testing | PR.PS-02 | MEA03 | Monitoring Activities | §11.5 exceções + evidências |
 | SoD autor ≠ aprovador em PROD crítica | GV.RR-02 / PR.PS-01 | DSS06.03 / BAI06 | Control Activities | §11.6.1 CODEOWNERS, branch protection, environment approval |
-| Change evidenciado e rastreável | PR.PS-01 / GV.OV-03 | BAI06 / MEA02 | Information & Communication | PR, check run, approval, AzureActivity, artefato publicado |
+| Mudança documentada e rastreável | PR.PS-01 / GV.OV-03 | BAI06 / MEA02 | Information & Communication | PR, check run, aprovação, AzureActivity, artefato publicado |
 | Evidência imutável de auditoria | PR.DS-01 / GV.OV-03 | DSS06 / MEA03 | Monitoring Activities | §10.7 Storage WORM, legal hold, retenção por finalidade |
 
-> Para mapear controles a evidências reais: a cada controle, registrar em sistema GRC o link para PR/issue/runbook/relatório que demonstra implementação. Se a evidência não é reproduzível, o controle não conta.
+> Para cada controle, registrar no sistema GRC o link para PR/issue/runbook/relatório que demonstra sua implementação. Evidência não reproduzível não comprova o controle.
 
 ---
 
-## Apêndice G — 1-pager executivo
+## Apêndice G: resumo executivo de uma página
 
-> Para reunião de patrocínio / steerco. Imprimir 1 página.
+> Para reunião de patrocínio ou comitê executivo. Imprimir em uma página.
 
-### Por que APIM corporativo agora
+### Objetivo do APIM corporativo
 
-APIM é o ponto técnico onde residência (LGPD/BACEN), exposição (parceiros/internet), segurança (mTLS, OAuth, FAPI), catálogo e governança de APIs ganham forma operacional. Sem ele padronizado, cada domínio resolve à sua maneira → fragmentação, custo, risco regulatório.
+APIM implementa controles de residência (LGPD/BACEN), exposição (parceiros/internet), segurança (mTLS, OAuth, FAPI), catálogo e governança de APIs. Sem padronização, cada domínio adota controles próprios, o que fragmenta a gestão e aumenta custos e riscos regulatórios.
 
-### A decisão central (5 perguntas — §1.1)
+### Critérios de decisão (5 perguntas, §1.1)
 
 1. Residência Brasil obrigatória? → hoje, Premium clássico (Premium v2 não listado em Brazil South [1][3]).
 2. API regulada (Open Finance/LGPD sensível/PCI)? → classe regulada com FAPI/mTLS (§7.7).
@@ -2082,9 +2082,9 @@ APIM é o ponto técnico onde residência (LGPD/BACEN), exposição (parceiros/i
 
 ### Recomendação
 
-**Modelo C — híbrido governado**: APIM corporativo padrão + instâncias dedicadas por exceção justificada (§4.5). Plataforma compartilhada por padrão; dedicada por gate.
+**Modelo C, híbrido governado**: APIM corporativo compartilhado como padrão, com instâncias dedicadas por exceção justificada e sujeita ao gate de aprovação (§4.5).
 
-### Os 6 "verdes" que precisamos para entregar
+### Seis entregas necessárias
 
 1. ADR de modelo + SKU + região (30 dias).
 2. APIM corporativo via IaC + Azure Policy guardrails (60 dias).
@@ -2093,13 +2093,13 @@ APIM é o ponto técnico onde residência (LGPD/BACEN), exposição (parceiros/i
 5. DR ensaiado por criticidade (180 dias).
 6. Self-service ≥ 70 % dos PRs, com DX medido (240 dias).
 
-### Custos e riscos chave
+### Principais custos e riscos
 
-- Driver dominante de custo: Log Analytics ingestion + Microsoft Sentinel/Defender for APIs + multi-region unit (§8.6).
+- Principal fator de custo: ingestão no Log Analytics + Microsoft Sentinel/Defender for APIs + unidades multi-region (§8.6).
 - Risco regulatório principal: classe regulada (Open Finance) sem mTLS, sem decisão de residência da telemetria ou sem retenção/WORM para evidência crítica.
-- Risco de execução principal: governança central sem caminho rápido → §11.6.
+- Risco de execução principal: governança central sem autoatendimento (§11.6).
 - Risco de auditoria: autor aprovando própria mudança em PROD crítica; mitigar com CODEOWNERS, branch protection e environment approval (§11.6.1).
 
 ### Decisões pendentes do cliente (§14)
 
-Bloqueiam implantação: modelo A/B/C, residência, classes do roadmap, regiões/destinos de telemetria/catálogo, aprovadores de exceção e retenção/WORM. Em paralelo: FinOps, DR/RTO/RPO e SoD. Pode esperar: estratégia Premium v2 futura e chargeback.
+Bloqueiam a implantação: modelo A/B/C, residência, classes de API previstas no plano, regiões/destinos de telemetria/catálogo, aprovadores de exceção e retenção/WORM. Em paralelo: FinOps, DR/RTO/RPO e SoD. Podem ser definidas depois: estratégia futura de Premium v2 e chargeback.

@@ -1,54 +1,43 @@
-# Aviso Legal (Disclaimer)
+# Aviso legal
 
-Este repositório contém código de exemplo, demonstrações e/ou provas de conceito fornecidos exclusivamente para fins ilustrativos, educacionais e experimentais.
+O conteúdo e os exemplos deste repositório destinam-se a estudo, demonstração e experimentação.
 
 ## Não destinado a produção
 
-Este código **não foi desenvolvido para uso direto em produção**.
+Os exemplos **não foram desenvolvidos para uso direto em produção**.
 
-Ele pode não atender requisitos essenciais de um ambiente produtivo, como:
+Eles podem não atender aos requisitos de um ambiente de produção, como:
 
 - Segurança
 - Alta disponibilidade
 - Recuperação de desastres
 - Monitoramento
-- Logging adequado
-- Performance
+- Registro de logs
+- Desempenho
 - Conformidade regulatória
 
-## Sem Garantias
+## Sem garantias
 
-TODO O CÓDIGO É FORNECIDO **"NO ESTADO EM QUE SE ENCONTRA"**, SEM GARANTIAS DE QUALQUER TIPO, EXPRESSAS OU IMPLÍCITAS, INCLUINDO, MAS NÃO SE LIMITANDO A:
+O material é fornecido **no estado em que se encontra**, sem garantias expressas ou implícitas, incluindo, entre outras:
 
-- Comercialização
+- Garantia de comercialização
 - Adequação a um propósito específico
 - Não violação de direitos
 
-## Sem Suporte Oficial da Microsoft
+## Sem vínculo ou suporte oficial da Microsoft
 
-Este projeto:
-
-- Não é afiliado à Microsoft
-- Não é endossado pela Microsoft
-- Não possui suporte oficial da Microsoft
+Este projeto não é afiliado à Microsoft, não é endossado por ela e não possui suporte oficial da empresa.
 
 ## Sem compromisso de suporte
 
-O autor/mantenedor não se compromete a:
-
-- Corrigir bugs
-- Atualizar o projeto
-- Fornecer suporte
-- Manter compatibilidade futura
-
-Qualquer melhoria será feita **quando e se houver disponibilidade**.
+O mantenedor não assume compromisso de corrigir erros, atualizar o projeto, fornecer suporte ou manter compatibilidade com versões futuras. Essas atividades dependem de sua disponibilidade.
 
 ## Uso por sua conta e risco
 
-Ao utilizar este código, você concorda que:
+Ao utilizar os exemplos, você:
 
-- É responsável por validar o funcionamento
-- Deve testar em ambiente não produtivo
+- É responsável por validar seu funcionamento
+- Deve testá-los em ambiente não produtivo
 - Assume todos os riscos associados
 
 O autor não se responsabiliza por:
@@ -60,28 +49,25 @@ O autor não se responsabiliza por:
 
 ## Dependências e mudanças externas
 
-Este código pode depender de APIs e serviços que podem mudar sem aviso prévio, o que pode causar:
-
-- Quebra de funcionalidade
-- Comportamentos inesperados
+Os exemplos podem depender de APIs e serviços que mudam sem aviso prévio. Essas mudanças podem causar falhas ou comportamentos inesperados.
 
 ## Responsabilidade do usuário
 
 Antes de utilizar, você deve:
 
-- Entender completamente o que o código faz
+- Compreender o funcionamento do código
 - Revisar permissões e acessos
-- Validar impacto em dados
-- Garantir que há rollback possível
+- Avaliar o impacto sobre os dados
+- Confirmar que as alterações podem ser revertidas
 
 ## Licença
 
-O uso deste código também segue os termos definidos no arquivo LICENSE.
+O uso do material também está sujeito aos termos do arquivo [LICENSE](./LICENSE).
 
 ## Uso em ambiente corporativo
 
-Caso este código seja utilizado em ambiente corporativo ou com clientes, recomenda-se:
+Antes de utilizar os exemplos em ambiente corporativo ou com clientes, recomenda-se:
 
 - Revisão de arquitetura
 - Avaliação de segurança
-- Validação de compliance
+- Validação de conformidade regulatória

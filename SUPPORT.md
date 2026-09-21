@@ -2,36 +2,27 @@
 
 ## Como obter ajuda
 
-Este projeto utiliza GitHub Issues para:
-
-- Bugs
-- Dúvidas
-- Sugestões
+Use as GitHub Issues para relatar erros, esclarecer dúvidas ou sugerir alterações.
 
 Antes de abrir uma issue:
 
-1. Verifique se já existe uma semelhante
-2. Leia README e DISCLAIMER
+1. Verifique se já existe uma issue sobre o assunto.
+2. Leia o [README](./README.md) e o [aviso legal](./DISCLAIMER.md).
 
 ## O que incluir
 
-- Descrição clara
-- Passos para reproduzir
-- Erro esperado vs ocorrido
-- Logs / prints
-- Versões utilizadas
+- Arquivo e trecho a que a dúvida ou o erro se refere
+- Descrição do problema ou da sugestão
+- Passos para reproduzir o problema, quando aplicável
+- Comportamento esperado e observado
+- Logs, capturas de tela e versões utilizadas, quando aplicável
 
 ## Nível de suporte
 
-Este projeto:
-
-- Não possui SLA
-- Não garante resposta
-- Não garante correções
-- Não garante evolução
+O projeto não possui SLA. Não há garantia de resposta, correção de erros ou novas versões.
 
 ## Suporte oficial
 
-Este repositório **não substitui suporte oficial da Microsoft**.
+Este repositório **não substitui o suporte oficial da Microsoft**.
 
-Para ambientes produtivos, utilize suporte oficial.
+Para ambientes de produção, utilize os canais oficiais de suporte.
