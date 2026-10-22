@@ -1,9 +1,23 @@
 cff-version: 1.2.0
 message: "Ao utilizar este material, cite a fonte."
-title: "APIM Workbook"
+title: "APIM Playbook: guia de Azure API Management"
+abstract: "Guia técnico de decisão, arquitetura, segurança, conformidade, APIOps, observabilidade e governança para adoção corporativa do Azure API Management (APIM)."
 type: software
+version: "1.0.0"
+date-released: "2026-10-22"
+license: CC-BY-4.0
 authors:
   - given-names: Ednei
     family-names: Monteiro
     orcid: "https://orcid.org/0009-0006-0765-4201"
-url: "https://github.com/EdneiMonteiro/apim-workbook"
+repository-code: "https://github.com/EdneiMonteiro/apim-playbook"
+url: "https://github.com/EdneiMonteiro/apim-playbook"
+keywords:
+  - azure
+  - api-management
+  - apim
+  - api-governance
+  - apiops
+  - cloud-architecture
+  - security
+  - finops
