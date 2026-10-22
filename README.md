@@ -1,6 +1,7 @@
 # APIM Playbook: guia de Azure API Management
 
 [![ORCID](https://img.shields.io/badge/ORCID-0009--0006--0765--4201-A6CE39?logo=orcid&logoColor=white)](https://orcid.org/0009-0006-0765-4201)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23559786.svg)](https://doi.org/10.5281/zenodo.23559786)
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](LICENSE)
 [![Azure](https://img.shields.io/badge/Cloud-Azure-0078D4?logo=microsoftazure&logoColor=white)](#)
 [![Last commit](https://img.shields.io/github/last-commit/EdneiMonteiro/apim-playbook)](https://github.com/EdneiMonteiro/apim-playbook/commits)
@@ -53,4 +54,16 @@ Guia técnico e agnóstico de **Azure API Management (APIM)** para decisões de 
 - **Apêndice E:** [Glossário técnico e regulatório](./playbook.md#apêndice-e-glossário)
 - **Apêndice F:** [Mapeamento NIST CSF 2.0, ISO/IEC 27001, COBIT 2019 e COSO 2013](./playbook.md#apêndice-f-resultados-nist-csf-20-práticas-apim-e-evidências-de-controle)
 - **Apêndice G:** [Síntese executiva de adoção, controles e prontidão](./playbook.md#apêndice-g-síntese-executiva-de-adoção-controles-e-prontidão)
+
+---
+
+## Como citar
+
+Este trabalho está arquivado no **Zenodo** com DOI permanente:
+
+- **Concept DOI (sempre aponta para a versão mais recente):** [`10.5281/zenodo.23559786`](https://doi.org/10.5281/zenodo.23559786)
+- **Version DOI (`v1.0.0`):** [`10.5281/zenodo.23559787`](https://doi.org/10.5281/zenodo.23559787)
+
+Metadados estruturados estão disponíveis em [`CITATION.cff`](./CITATION.cff).
+
 
