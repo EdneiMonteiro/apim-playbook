@@ -62,6 +62,7 @@ Guia técnico e agnóstico de **Azure API Management (APIM)** para decisões de 
 Este trabalho está arquivado no **Zenodo** com DOI permanente:
 
 - **Concept DOI (sempre aponta para a versão mais recente):** [`10.5281/zenodo.23559786`](https://doi.org/10.5281/zenodo.23559786)
+- **Version DOI (`v2.0.0`):** [`10.5281/zenodo.23631379`](https://doi.org/10.5281/zenodo.23631379)
 - **Version DOI (`v1.0.0`):** [`10.5281/zenodo.23559787`](https://doi.org/10.5281/zenodo.23559787)
 
 Metadados estruturados estão disponíveis em [`CITATION.cff`](./CITATION.cff).
