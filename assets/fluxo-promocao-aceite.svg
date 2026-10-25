@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 350" width="100%" height="auto" role="img" aria-label="Fluxo de promoção e aceite de APIOps">
+  <defs>
+    <style>
+      .bg { fill: #0d1321; stroke: #293548; stroke-width: 1.5; }
+      .title-main { font: 700 15.5px 'Segoe UI', sans-serif; fill: #f8fafc; letter-spacing: 0.4px; }
+      .subtitle-main { font: 400 12px 'Segoe UI', sans-serif; fill: #94a3b8; }
+      .step-ci { fill: #172554; stroke: #38bdf8; stroke-width: 1.5; rx: 8; }
+      .step-env { fill: #064e3b; stroke: #34d399; stroke-width: 1.5; rx: 8; }
+      .step-gate { fill: #451a03; stroke: #fbbf24; stroke-width: 1.8; rx: 8; }
+      .step-prod { fill: #2e1065; stroke: #c084fc; stroke-width: 1.8; rx: 8; }
+      .step-title { font: 700 12.5px 'Segoe UI', sans-serif; fill: #f8fafc; }
+      .step-desc { font: 400 11px 'Segoe UI', sans-serif; fill: #cbd5e1; }
+      .arrow { stroke: #64748b; stroke-width: 2; fill: none; marker-end: url(#m-arr); }
+      .arrow-turn { stroke: #64748b; stroke-width: 2; stroke-dasharray: 5 3; fill: none; marker-end: url(#m-arr); }
+    </style>
+    <marker id="m-arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="4" y="4" width="1192" height="342" rx="12"/>
+  <text class="title-main" x="28" y="34">FLUXO IMUTÁVEL DE PROMOÇÃO, AUTORIZAÇÃO SEGREGADA (SoD) E ACEITE (§9.2)</text>
+  <text class="subtitle-main" x="28" y="53">O mesmo pacote selado (SHA-256) avança entre ambientes; falha em qualquer etapa bloqueia a promoção ou conclusão</text>
+
+  <!-- ROW 1: Etapas 1 a 5 (y=72, h=102) -->
+  <rect class="step-ci" x="24" y="72" width="214" height="102"/>
+  <text class="step-title" x="36" y="96">1. [PR] Validação em CI</text>
+  <text class="step-desc" x="36" y="116">• Contratos por protocolo</text>
+  <text class="step-desc" x="36" y="134">• Lint XML/regras e fixtures</text>
+  <text class="step-desc" x="36" y="152">• Secrets scan obrigatório</text>
+  <line class="arrow" x1="238" y1="123" x2="254" y2="123"/>
+
+  <rect class="step-ci" x="258" y="72" width="214" height="102"/>
+  <text class="step-title" x="270" y="96">2. [Revisão] Aprovação PR</text>
+  <text class="step-desc" x="270" y="116">• Aprovador responsável (A)</text>
+  <text class="step-desc" x="270" y="134">• Consultas obrigatórias (C)</text>
+  <text class="step-desc" x="270" y="152">• CODEOWNERS sem self-review</text>
+  <line class="arrow" x1="472" y1="123" x2="488" y2="123"/>
+
+  <rect class="step-ci" x="492" y="72" width="214" height="102"/>
+  <text class="step-title" x="504" y="96">3. [Merge] Build Único</text>
+  <text class="step-desc" x="504" y="116">• Gera pacote selado único</text>
+  <text class="step-desc" x="504" y="134">• Parâmetros por ambiente</text>
+  <text class="step-desc" x="504" y="152">• Manifesto com hash SHA-256</text>
+  <line class="arrow" x1="706" y1="123" x2="722" y2="123"/>
+
+  <rect class="step-env" x="726" y="72" width="214" height="102"/>
+  <text class="step-title" x="738" y="96">4. [DEV] Deploy e Testes</text>
+  <text class="step-desc" x="738" y="116">• Implanta o pacote selado</text>
+  <text class="step-desc" x="738" y="134">• Chamadas reais no gateway</text>
+  <text class="step-desc" x="738" y="152">• Casos positivos e negativos</text>
+  <line class="arrow" x1="940" y1="123" x2="956" y2="123"/>
+
+  <rect class="step-env" x="960" y="72" width="216" height="102"/>
+  <text class="step-title" x="972" y="96">5. [UAT] Qualificação</text>
+  <text class="step-desc" x="972" y="116">• Mesmo hash SHA-256</text>
+  <text class="step-desc" x="972" y="134">• Contrato, carga e segurança</text>
+  <text class="step-desc" x="972" y="152">• Recuperação / DR ensaiada</text>
+
+  <!-- Connector Row 1 -> Row 2 -->
+  <path class="arrow-turn" d="M 1068 174 L 1068 196 L 154 196 L 154 216"/>
+
+  <!-- ROW 2: Etapas 6 a 9 (y=220, h=104) -->
+  <rect class="step-gate" x="24" y="220" width="268" height="104"/>
+  <text class="step-title" x="36" y="244">6. [Prévia PROD] Plano Efetivo</text>
+  <text class="step-desc" x="36" y="264">• Template ARM + parâmetros PROD</text>
+  <text class="step-desc" x="36" y="282">• Preview da configuração APIM</text>
+  <text class="step-desc" x="36" y="300">• Identidade isolada de prévia</text>
+  <line class="arrow" x1="292" y1="272" x2="312" y2="272"/>
+
+  <rect class="step-gate" x="316" y="220" width="298" height="104"/>
+  <text class="step-title" x="328" y="244">7. [Autorização] Gate e SoD (§11.6.1)</text>
+  <text class="step-desc" x="328" y="264">• Provas DEV/UAT + plano PROD validado</text>
+  <text class="step-desc" x="328" y="282">• SoD para crítica, financeira ou regulada</text>
+  <text class="step-desc" x="328" y="300">• Exceções vigentes (§11.5) e janela ativa</text>
+  <line class="arrow" x1="614" y1="272" x2="634" y2="272"/>
+
+  <rect class="step-prod" x="638" y="220" width="258" height="104"/>
+  <text class="step-title" x="650" y="244">8. [PROD] Publicação Controlada</text>
+  <text class="step-desc" x="650" y="264">• Mesmo hash e parâmetros aprovados</text>
+  <text class="step-desc" x="650" y="282">• Smoke tests e health probes</text>
+  <text class="step-desc" x="650" y="300">• Janela de observação contratada</text>
+  <line class="arrow" x1="896" y1="272" x2="916" y2="272"/>
+
+  <rect class="step-prod" x="920" y="220" width="256" height="104"/>
+  <text class="step-title" x="932" y="244">9. [Conclusão] Aceite Final</text>
+  <text class="step-desc" x="932" y="264">• Saúde e evidências verificadas</text>
+  <text class="step-desc" x="932" y="282">• Atualiza baseline após o aceite</text>
+  <text class="step-desc" x="932" y="300">• Falha mantém release reprovado</text>
+</svg>

@@ -1,0 +1,164 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" width="100%" height="auto" role="img" aria-label="Diagrama lógico e fronteiras de responsabilidade do Azure API Management">
+  <defs>
+    <style>
+      .bg { fill: #0d1321; stroke: #293548; stroke-width: 1.5; }
+      .lane { fill: #131c2e; stroke: #2b3b54; stroke-width: 1.5; rx: 10; }
+      .title-main { font: 700 16px 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; fill: #f8fafc; letter-spacing: 0.4px; }
+      .subtitle-main { font: 400 12.5px 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; fill: #94a3b8; }
+      .lane-hdr-blue { font: 700 12.5px 'Segoe UI', sans-serif; fill: #38bdf8; letter-spacing: 0.6px; }
+      .lane-hdr-emerald { font: 700 12.5px 'Segoe UI', sans-serif; fill: #34d399; letter-spacing: 0.6px; }
+      .lane-hdr-purple { font: 700 12.5px 'Segoe UI', sans-serif; fill: #c084fc; letter-spacing: 0.6px; }
+      .lane-hdr-amber { font: 700 12.5px 'Segoe UI', sans-serif; fill: #fbbf24; letter-spacing: 0.6px; }
+      .node-blue { fill: #172554; stroke: #38bdf8; stroke-width: 1.5; rx: 8; }
+      .node-emerald { fill: #064e3b; stroke: #34d399; stroke-width: 1.5; rx: 8; }
+      .node-purple { fill: #2e1065; stroke: #c084fc; stroke-width: 1.5; rx: 8; }
+      .node-amber { fill: #451a03; stroke: #fbbf24; stroke-width: 1.5; rx: 8; }
+      .node-neutral { fill: #1e293b; stroke: #64748b; stroke-width: 1.5; rx: 8; }
+      .node-title { font: 600 13px 'Segoe UI', sans-serif; fill: #f8fafc; }
+      .node-sub { font: 400 11px 'Segoe UI', sans-serif; fill: #cbd5e1; }
+      .note-box { fill: #0f172a; stroke: #334155; stroke-dasharray: 4 3; stroke-width: 1.2; rx: 6; }
+      .note-text { font: 400 11px 'Segoe UI', sans-serif; fill: #93c5fd; }
+      .note-text-em { font: 400 11px 'Segoe UI', sans-serif; fill: #6ee7b7; }
+      .arrow-blue { stroke: #38bdf8; stroke-width: 2; fill: none; marker-end: url(#m-blue); }
+      .arrow-emerald { stroke: #34d399; stroke-width: 2; fill: none; marker-end: url(#m-emerald); }
+      .arrow-purple { stroke: #c084fc; stroke-width: 2; fill: none; marker-end: url(#m-purple); }
+      .arrow-amber { stroke: #fbbf24; stroke-width: 2; fill: none; marker-end: url(#m-amber); }
+    </style>
+    <marker id="m-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#38bdf8"/>
+    </marker>
+    <marker id="m-emerald" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#34d399"/>
+    </marker>
+    <marker id="m-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#c084fc"/>
+    </marker>
+    <marker id="m-amber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#fbbf24"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="4" y="4" width="1192" height="712" rx="12"/>
+  <text class="title-main" x="28" y="36">ARQUITETURA LÓGICA E FRONTEIRAS DE RESPONSABILIDADE DO AZURE APIM (§5.3)</text>
+  <text class="subtitle-main" x="28" y="56">Separação entre tráfego externo Azure, tráfego híbrido/multicloud, plano de gestão/catálogo e telemetria/detecção</text>
+
+  <!-- LANE 1: TRÁFEGO EXTERNO PARA BACKENDS AZURE (x=24, y=74, w=640, h=405) -->
+  <rect class="lane" x="24" y="74" width="640" height="405"/>
+  <rect x="24" y="74" width="640" height="4" rx="2" fill="#38bdf8"/>
+  <text class="lane-hdr-blue" x="44" y="102">1. TRÁFEGO EXTERNO PARA BACKENDS AZURE (PLANO DE DADOS GERENCIADO)</text>
+
+  <rect class="node-neutral" x="44" y="118" width="266" height="48"/>
+  <text class="node-title" x="177" y="140" text-anchor="middle">Consumidor externo</text>
+  <text class="node-sub" x="177" y="156" text-anchor="middle">App móvel, web, parceiro B2B ou M2M</text>
+
+  <line class="arrow-blue" x1="177" y1="166" x2="177" y2="200"/>
+
+  <rect class="node-blue" x="44" y="204" width="266" height="62"/>
+  <text class="node-title" x="177" y="227" text-anchor="middle">WAF Global ou Regional</text>
+  <text class="node-sub" x="177" y="244" text-anchor="middle">Front Door OU Application Gateway</text>
+  <text class="node-sub" x="177" y="259" text-anchor="middle">(Ambos só com justificativa na ADR)</text>
+
+  <rect class="note-box" x="326" y="204" width="318" height="62"/>
+  <text class="note-text" x="340" y="225">• Origem APIM restrita à borda aprovada</text>
+  <text class="note-text" x="340" y="243">• Identidade mTLS validada no ponto</text>
+  <text class="note-text" x="340" y="259">  escolhido de terminação TLS (§8.5)</text>
+
+  <line class="arrow-blue" x1="177" y1="266" x2="177" y2="300"/>
+
+  <rect class="node-blue" x="44" y="304" width="266" height="62"/>
+  <text class="node-title" x="177" y="327" text-anchor="middle">Gateway APIM Gerenciado</text>
+  <text class="node-sub" x="177" y="344" text-anchor="middle">Mediação de perímetro, OAuth/OIDC,</text>
+  <text class="node-sub" x="177" y="359" text-anchor="middle">mTLS, quotas, schemas e correlação</text>
+
+  <rect class="note-box" x="326" y="304" width="318" height="62"/>
+  <text class="note-text" x="340" y="325">• Autenticação, autorização e policies</text>
+  <text class="note-text" x="340" y="343">• Conectividade privada (VNet/Private Link)</text>
+  <text class="note-text" x="340" y="359">  e credenciais de saída aprovadas</text>
+
+  <line class="arrow-blue" x1="177" y1="366" x2="177" y2="400"/>
+
+  <rect class="node-blue" x="44" y="404" width="266" height="58"/>
+  <text class="node-title" x="177" y="427" text-anchor="middle">Backends no Azure</text>
+  <text class="node-sub" x="177" y="445" text-anchor="middle">App Service / AKS / Azure Functions</text>
+
+  <rect class="note-box" x="326" y="404" width="318" height="58"/>
+  <text class="note-text" x="340" y="427">• Autorização de domínio (BOLA/BFLA)</text>
+  <text class="note-text" x="340" y="446">• Regras de negócio e dados (§7.3)</text>
+
+  <!-- LANE 2: TRÁFEGO PARA BACKENDS HÍBRIDOS OU MULTICLOUD (x=684, y=74, w=492, h=405) -->
+  <rect class="lane" x="684" y="74" width="492" height="405"/>
+  <rect x="684" y="74" width="492" height="4" rx="2" fill="#34d399"/>
+  <text class="lane-hdr-emerald" x="704" y="102">2. TRÁFEGO PARA BACKENDS HÍBRIDOS OU MULTICLOUD</text>
+
+  <rect class="node-neutral" x="704" y="118" width="452" height="54"/>
+  <text class="node-title" x="930" y="142" text-anchor="middle">Consumidor autorizado (local, híbrido ou multicloud)</text>
+  <text class="node-sub" x="930" y="159" text-anchor="middle">Roteamento direto ao gateway local próximo ao backend</text>
+
+  <line class="arrow-emerald" x1="930" y1="172" x2="930" y2="216"/>
+
+  <rect class="node-emerald" x="704" y="220" width="452" height="78"/>
+  <text class="node-title" x="930" y="245" text-anchor="middle">Self-hosted Gateway (contêineres operados pelo cliente)</text>
+  <text class="node-sub" x="930" y="264" text-anchor="middle">Orquestração, HA, escala, certificados, rede e coletor local</text>
+  <text class="node-sub" x="930" y="281" text-anchor="middle">operados pelo cliente (não é backend do gateway gerenciado)</text>
+
+  <line class="arrow-emerald" x1="930" y1="298" x2="930" y2="342"/>
+
+  <rect class="node-emerald" x="704" y="346" width="452" height="62"/>
+  <text class="node-title" x="930" y="372" text-anchor="middle">Backends locais (on-premises) ou em outras nuvens</text>
+  <text class="node-sub" x="930" y="391" text-anchor="middle">Tráfego local sem ida e volta desnecessária à nuvem Azure</text>
+
+  <rect class="note-box" x="704" y="420" width="452" height="44"/>
+  <text class="note-text-em" x="930" y="439" text-anchor="middle">Sincroniza configuração com o plano de gestão APIM;</text>
+  <text class="note-text-em" x="930" y="455" text-anchor="middle">exige detecção alternativa ao Defender for APIs [8] [54]</text>
+
+  <!-- LANE 3: ADMINISTRAÇÃO E CATÁLOGO (x=24, y=496, w=640, h=200) -->
+  <rect class="lane" x="24" y="496" width="640" height="200"/>
+  <rect x="24" y="496" width="640" height="4" rx="2" fill="#c084fc"/>
+  <text class="lane-hdr-purple" x="44" y="524">3. ADMINISTRAÇÃO, SEGREDOS E CATÁLOGO (FORA DO CAMINHO DE EXECUÇÃO)</text>
+
+  <rect class="node-neutral" x="44" y="538" width="196" height="40"/>
+  <text class="node-title" x="142" y="563" text-anchor="middle">Pipelines + Entra ID + RBAC</text>
+  <line class="arrow-purple" x1="240" y1="558" x2="266" y2="558"/>
+  <rect class="node-purple" x="270" y="538" width="176" height="40"/>
+  <text class="node-title" x="358" y="563" text-anchor="middle">Plano de Gestão APIM</text>
+  <line class="arrow-purple" x1="446" y1="558" x2="472" y2="558"/>
+  <rect class="node-purple" x="476" y="538" width="168" height="40"/>
+  <text class="node-title" x="560" y="563" text-anchor="middle">Gateways (Config)</text>
+
+  <rect class="node-neutral" x="44" y="590" width="196" height="40"/>
+  <text class="node-title" x="142" y="615" text-anchor="middle">Azure Key Vault</text>
+  <line class="arrow-purple" x1="240" y1="610" x2="266" y2="610"/>
+  <rect class="node-purple" x="270" y="590" width="374" height="40"/>
+  <text class="node-title" x="457" y="615" text-anchor="middle">Integrações de segredos e certificados TLS/mTLS</text>
+
+  <rect class="node-neutral" x="44" y="642" width="196" height="40"/>
+  <text class="node-title" x="142" y="667" text-anchor="middle">Inventário / API Center</text>
+  <line class="arrow-purple" x1="240" y1="662" x2="266" y2="662"/>
+  <rect class="node-purple" x="270" y="642" width="374" height="40"/>
+  <text class="node-title" x="457" y="667" text-anchor="middle">Contratos, donos e sincronização (§9.5.4)</text>
+
+  <!-- LANE 4: TELEMETRIA E DETECÇÃO (x=684, y=496, w=492, h=200) -->
+  <rect class="lane" x="684" y="496" width="492" height="200"/>
+  <rect x="684" y="496" width="492" height="4" rx="2" fill="#fbbf24"/>
+  <text class="lane-hdr-amber" x="704" y="524">4. TELEMETRIA, AUDITORIA E DETECÇÃO DE AMEAÇAS</text>
+
+  <rect class="node-neutral" x="704" y="544" width="130" height="54"/>
+  <text class="node-title" x="769" y="568" text-anchor="middle">Cada runtime</text>
+  <text class="node-sub" x="769" y="585" text-anchor="middle">(Clássico/v2/SHG)</text>
+  <line class="arrow-amber" x1="834" y1="571" x2="858" y2="571"/>
+  <rect class="node-amber" x="862" y="544" width="180" height="54"/>
+  <text class="node-title" x="952" y="568" text-anchor="middle">Coletores aprovados</text>
+  <text class="node-sub" x="952" y="585" text-anchor="middle">Log Analytics / App Insights</text>
+  <line class="arrow-amber" x1="1042" y1="571" x2="1066" y2="571"/>
+  <rect class="node-amber" x="1070" y="544" width="86" height="54"/>
+  <text class="node-title" x="1113" y="568" text-anchor="middle">SOC</text>
+  <text class="node-sub" x="1113" y="585" text-anchor="middle">Sentinel</text>
+
+  <rect class="node-neutral" x="704" y="618" width="130" height="58"/>
+  <text class="node-title" x="769" y="643" text-anchor="middle">APIs REST</text>
+  <text class="node-sub" x="769" y="660" text-anchor="middle">elegíveis</text>
+  <line class="arrow-amber" x1="834" y1="647" x2="858" y2="647"/>
+  <rect class="node-amber" x="862" y="618" width="294" height="58"/>
+  <text class="node-title" x="1009" y="642" text-anchor="middle">Microsoft Defender for APIs</text>
+  <text class="node-sub" x="1009" y="660" text-anchor="middle">Exclui workspaces e self-hosted (§7.6)</text>
+</svg>

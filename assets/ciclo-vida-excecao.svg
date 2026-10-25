@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 290" width="100%" height="auto" role="img" aria-label="Ciclo de vida formal de exceções internas">
+  <defs>
+    <style>
+      .bg { fill: #0d1321; stroke: #293548; stroke-width: 1.5; }
+      .title-main { font: 700 15.5px 'Segoe UI', sans-serif; fill: #f8fafc; letter-spacing: 0.4px; }
+      .subtitle-main { font: 400 12px 'Segoe UI', sans-serif; fill: #94a3b8; }
+      .st-flow { fill: #172554; stroke: #38bdf8; stroke-width: 1.5; rx: 8; }
+      .st-active { fill: #1e1b4b; stroke: #818cf8; stroke-width: 1.5; rx: 8; }
+      .st-ok { fill: #064e3b; stroke: #34d399; stroke-width: 1.5; rx: 8; }
+      .st-renew { fill: #451a03; stroke: #fbbf24; stroke-width: 1.5; rx: 8; }
+      .st-block { fill: #450a0a; stroke: #f87171; stroke-width: 1.8; rx: 8; }
+      .st-title { font: 700 12.5px 'Segoe UI', sans-serif; fill: #f8fafc; }
+      .st-desc { font: 400 11px 'Segoe UI', sans-serif; fill: #cbd5e1; }
+      .arrow { stroke: #94a3b8; stroke-width: 2; fill: none; marker-end: url(#m-a); }
+    </style>
+    <marker id="m-a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="4" y="4" width="1192" height="282" rx="12"/>
+  <text class="title-main" x="28" y="34">CICLO DE VIDA FORMAL E DESFECHOS DE EXCEÇÃO INTERNA ELEGÍVEL (§11.5.2)</text>
+  <text class="subtitle-main" x="28" y="53">Aplicável somente a padrões internos dispensáveis; nenhuma exceção dispensa obrigação legal, regulatória ou contratual externa</text>
+
+  <rect class="st-flow" x="24" y="106" width="118" height="76"/>
+  <text class="st-title" x="83" y="136" text-anchor="middle">1. Solicitada</text>
+  <text class="st-desc" x="83" y="156" text-anchor="middle">Registro e dono</text>
+  <text class="st-desc" x="83" y="170" text-anchor="middle">da remediação</text>
+  <line class="arrow" x1="142" y1="144" x2="156" y2="144"/>
+
+  <rect class="st-flow" x="160" y="106" width="144" height="76"/>
+  <text class="st-title" x="232" y="132" text-anchor="middle">2. Elegibilidade</text>
+  <text class="st-desc" x="232" y="150" text-anchor="middle">(Preflight §11.5.1)</text>
+  <text class="st-desc" x="232" y="166" text-anchor="middle">Veda norma externa</text>
+  <line class="arrow" x1="304" y1="144" x2="318" y2="144"/>
+
+  <rect class="st-flow" x="322" y="106" width="144" height="76"/>
+  <text class="st-title" x="394" y="132" text-anchor="middle">3. Análise Técnica</text>
+  <text class="st-desc" x="394" y="150" text-anchor="middle">Risco, pareceres (C)</text>
+  <text class="st-desc" x="394" y="166" text-anchor="middle">e compensações</text>
+  <line class="arrow" x1="466" y1="144" x2="480" y2="144"/>
+
+  <rect class="st-active" x="484" y="106" width="154" height="76"/>
+  <text class="st-title" x="561" y="132" text-anchor="middle">4. Aprovada por (A)</text>
+  <text class="st-desc" x="561" y="150" text-anchor="middle">Escopo fechado, testes</text>
+  <text class="st-desc" x="561" y="166" text-anchor="middle">e validade fixa</text>
+  <line class="arrow" x1="638" y1="144" x2="652" y2="144"/>
+
+  <rect class="st-active" x="656" y="106" width="158" height="76"/>
+  <text class="st-title" x="735" y="132" text-anchor="middle">5. Ativa e Revisada</text>
+  <text class="st-desc" x="735" y="150" text-anchor="middle">Monitorada no gate</text>
+  <text class="st-desc" x="735" y="166" text-anchor="middle">antes do vencimento</text>
+
+  <path class="arrow" d="M 814 126 L 840 126 L 840 94 L 866 94"/>
+  <line class="arrow" x1="814" y1="144" x2="866" y2="144"/>
+  <path class="arrow" d="M 814 162 L 840 162 L 840 232 L 866 232"/>
+
+  <rect class="st-ok" x="870" y="66" width="306" height="54"/>
+  <text class="st-title" x="1023" y="89" text-anchor="middle">Encerrada por remediação</text>
+  <text class="st-desc" x="1023" y="107" text-anchor="middle">Controle padrão restabelecido em produção</text>
+
+  <rect class="st-renew" x="870" y="134" width="306" height="54"/>
+  <text class="st-title" x="1023" y="157" text-anchor="middle">Renovada por nova decisão formal</text>
+  <text class="st-desc" x="1023" y="175" text-anchor="middle">Novas provas e aceite; vedada prorrogação tácita</text>
+
+  <rect class="st-block" x="870" y="202" width="306" height="58"/>
+  <text class="st-title" x="1023" y="225" text-anchor="middle">Expirada / Suspensa (Contenção)</text>
+  <text class="st-desc" x="1023" y="243" text-anchor="middle">Bloqueia pipeline e aciona plano de contenção</text>
+</svg>

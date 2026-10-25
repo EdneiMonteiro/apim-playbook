@@ -354,34 +354,7 @@ As integrações abaixo têm controles próprios. Um endpoint privado de entrada
 
 O consumidor utiliza o gateway adequado à localização dos backends e aos controles exigidos. O self-hosted gateway executa perto dos backends híbridos ou multicloud; ele não é um backend do gateway gerenciado [[8]](#ref-8) [[54]](#ref-54).
 
-```mermaid
-flowchart TD
-    subgraph S1["1. TRÁFEGO EXTERNO PARA BACKENDS AZURE"]
-        direction TB
-        CE["Consumidor externo"] -->|"Ambos somente com justificativa arquitetural<br/>Origem restrita; identidade mTLS tratada no ponto escolhido"| WAF["WAF global (Front Door) OU WAF regional (Application Gateway)"]
-        WAF -->|"Autenticação, autorização de entrada e policies de consumo<br/>Conectividade e credenciais de saída aprovadas"| APIM["Gateway APIM gerenciado"]
-        APIM -->|"Autorização de domínio, regras de negócio e acesso aos dados"| BE["Backends: App Service / Azure Kubernetes Service (AKS) / Functions"]
-    end
-
-    subgraph S2["2. TRÁFEGO PARA BACKENDS HÍBRIDOS OU MULTICLOUD"]
-        direction TB
-        CA["Consumidor autorizado"] --> SHG["Self-hosted gateway em contêineres operados pelo cliente"]
-        SHG --> BEL["Backends locais ou em outras nuvens"]
-    end
-
-    subgraph S3["3. ADMINISTRAÇÃO E CATÁLOGO"]
-        direction LR
-        PIPE["Pipelines + Entra ID + RBAC"] --> MGMT["Plano de gestão APIM"] --> GW["Gateways"]
-        KV["Key Vault"] --> SEC["Integrações autorizadas de segredos/certificados"]
-        CAT["Inventário / API Center"] --> SYNC["Contratos, responsáveis e sincronização configurada"]
-    end
-
-    subgraph S4["4. TELEMETRIA E DETECÇÃO"]
-        direction LR
-        RUN["Cada runtime"] --> COL["Coletores e destinos aprovados"] --> SOC["SOC"]
-        REST["APIs REST elegíveis"] --> DEF["Defender for APIs, após integração ao plano"]
-    end
-```
+![Diagrama lógico e fronteiras de responsabilidade do Azure API Management](./assets/diagrama-logico-fronteiras.svg)
 
 **Legenda e limites.** RBAC é o controle de acesso baseado em papéis. Rede virtual (VNet) e Private Link dependem do tier e do gateway escolhido. O inventário representa o catálogo corporativo aprovado; o API Center é adotado quando seus destinos, dados e acessos são elegíveis. Catálogo e observabilidade representam integrações configuradas, não descoberta ou exportação universais. O API Center permanece fora do caminho de execução. Workspaces e self-hosted gateway exigem detecção alternativa ao Defender for APIs [[58]](#ref-58).
 
@@ -1015,17 +988,7 @@ O fluxo GitOps usa PR, revisão, merge e promoção automatizada, preferencialme
 
 Na produção de APIs críticas, financeiras ou reguladas, o ponto de verificação (*gate*) de autorização exige evidência de segregação de funções (SoD, *Segregation of Duties*) antes de liberar a escrita. A regra de autorização de §11.6.1, em [§11.6](#116-autoatendimento-e-mudanças-sujeitas-a-aprovação), prevalece sobre este resumo.
 
-```mermaid
-flowchart TD
-    PR["[PR] CI: contratos por protocolo, lint XML/regras, secrets scan e fixtures"] --> REV["[revisão] Aprovador responsável (A) e consultas aplicáveis"]
-    REV --> MERGE["[merge] build único; pacote, parâmetros e manifesto com hash"]
-    MERGE --> DEV["[DEV] implantar esse pacote; requests reais e testes positivos/negativos"]
-    DEV --> UAT["[UAT] mesmo hash; contrato, desempenho, segurança e recuperação ensaiada"]
-    UAT --> PREV["[prévia PROD] template ARM + parâmetros PROD; preview da configuração APIM"]
-    PREV --> AUT["[autorização] provas DEV/UAT + plano PROD + segregação de funções (SoD) + exceções válidas + janela"]
-    AUT --> PROD["[PROD] mesmo hash e parâmetros aprovados; smoke e observação contratada"]
-    PROD --> CONC["[conclusão] saúde e evidência verificadas; falha bloqueia promoção/conclusão"]
-```
+![Fluxo imutável de promoção, autorização segregada (SoD) e aceite](./assets/fluxo-promocao-aceite.svg)
 
 O Aprovador responsável (A), definido em [§11.3](#113-raci-resumido), deve ser distinto dos autores da mudança e dos iniciadores humanos da implantação na produção de APIs críticas, financeiras ou reguladas. A SoD exige verificar identidades e controles efetivos conforme §11.6.1. A configuração e os testes devem demonstrar quem cada controle impede de aprovar, incluindo `Prevent self-review` do GitHub, e registrar a separação efetiva entre autores, iniciadores e aprovador.
 
@@ -1525,17 +1488,7 @@ Abra todo pedido de exceção em sistema rastreável e preencha sete requisitos 
 
 Conduza o ciclo de vida de cada exceção pelos estados controlados a seguir:
 
-```mermaid
-flowchart TD
-    S1["Solicitada"] --> S2["Elegibilidade verificada (Preflight)"]
-    S2 --> S3["Análise técnica e de risco"]
-    S3 --> S4["Aprovada com escopo fechado, controles compensatórios e prazo de validade"]
-    S4 --> S5["Ativa em monitoramento"]
-    S5 --> S6["Revisão obrigatória antes do vencimento"]
-    S6 --> E1["Encerrada por remediação"]
-    S6 --> E2["Renovada por nova decisão formal"]
-    S6 --> E3["Expirada/Suspensa com contenção acionada"]
-```
+![Ciclo de vida formal e desfechos de exceção interna elegível](./assets/ciclo-vida-excecao.svg)
 
 Em cada promoção na esteira de publicação (CI/CD e APIOps), o ponto de verificação (*gate*) consulta automaticamente o inventário central de exceções e libera a passagem somente quando localiza um registro com status aprovado, dentro do prazo de validade, sem marcador de suspensão, cujo escopo (API, ambiente, regra dispensada e hash de revisão) coincida com o artefato em implantação e cujas mitigações compensatórias estejam comprovadas. Quando o registro estiver ausente, vencido, revogado ou incompleto, o pipeline bloqueia novas publicações na API afetada.
 
